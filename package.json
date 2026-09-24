@@ -1,0 +1,18 @@
+{
+  "name": "panel-administrativo-escolar",
+  "version": "0.1.0",
+  "description": "Panel administrativo/contable para colegios, integrado con Moodle (ulúa Media - Campus Virtual)",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "revisar-pagos": "node server/jobs/revisarPagos.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0",
+    "node-cron": "^3.0.3",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.12.0"
+  }
+}
