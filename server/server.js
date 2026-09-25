@@ -8,6 +8,7 @@ const profesoresRoutes = require('./routes/profesores');
 const pagosRoutes = require('./routes/pagos');
 const reportesRoutes = require('./routes/reportes');
 const seedRoutes = require('./routes/seed');
+const gradosRoutes = require('./routes/grados');
 const revisarPagos = require('./jobs/revisarPagos');
 
 const app = express();
@@ -20,10 +21,10 @@ app.use('/api/profesores', profesoresRoutes);
 app.use('/api/pagos', pagosRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/seed', seedRoutes);
+app.use('/api/grados', gradosRoutes);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-// Cron: todos los días a las 6:00 AM revisa vencimientos y sincroniza Moodle
 cron.schedule('0 6 * * *', () => {
   revisarPagos().catch(err => console.error('Error en cron de pagos:', err));
 });
