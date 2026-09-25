@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const cron = require('node-cron');
 
 const alumnosRoutes = require('./routes/alumnos');
@@ -10,6 +11,7 @@ const seedRoutes = require('./routes/seed');
 const revisarPagos = require('./jobs/revisarPagos');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use('/generated-pdfs', express.static('generated-pdfs'));
 
