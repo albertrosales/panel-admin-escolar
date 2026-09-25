@@ -1,28 +1,28 @@
-require('dotenv').config();
 const express = require('express');
-const cron = require('node-cron');
+const router = express.Router();
+const pool = require('../db');
 
-const alumnosRoutes = require('./routes/alumnos');
-const profesoresRoutes = require('./routes/profesores');
-const pagosRoutes = require('./routes/pagos');
-const reportesRoutes = require('./routes/reportes');
-const revisarPagos = require('./jobs/revisarPagos');
+/**
+ * ENDPOINT TEMPORAL — usar una sola vez para crear el colegio piloto,
+ * luego eliminar este archivo y su registro en server.js por seguridad.
+ *
+ * Visitar en el navegador: https://TU-BACKEND.onrender.com/api/seed/colegio
+ */
+router.get('/colegio', async (req, res) => {
+  try {
+    const { rows: existentes } = await pool.query('SELECT * FROM colegios');
+    if (existentes.length > 0) {
+      return res.json({ mensaje: 'Ya existe al menos un colegio, no se creó otro.', colegios: existentes });
+    }
 
-const app = express();
-app.use(express.json());
-app.use('/generated-pdfs', express.static('generated-pdfs'));
-
-app.use('/api/alumnos', alumnosRoutes);
-app.use('/api/profesores', profesoresRoutes);
-app.use('/api/pagos', pagosRoutes);
-app.use('/api/reportes', reportesRoutes);
-
-app.get('/health', (req, res) => res.json({ ok: true }));
-
-// Cron: todos los días a las 6:00 AM revisa vencimientos y sincroniza Moodle
-cron.schedule('0 6 * * *', () => {
-  revisarPagos().catch(err => console.error('Error en cron de pagos:', err));
+    const { rows: [colegio] } = await pool.query(
+      `INSERT INTO colegios (nombre, moodle_url, moodle_token) VALUES ($1,$2,$3) RETURNING *`,
+      ['Ulua Campus - Piloto', 'https://edu.uluamedia.com', process.env.MOODLE_TOKEN_PILOTO]
+    );
+    res.json({ mensaje: 'Colegio creado', colegio });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Panel administrativo escuchando en puerto ${PORT}`));
+module.exports = router;
