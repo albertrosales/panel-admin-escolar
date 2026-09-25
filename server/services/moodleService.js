@@ -1,93 +1,124 @@
-/**
- * Servicio de integración con Moodle Web Services (REST API).
- * Requiere que en el Moodle del colegio esté habilitado un "web service"
- * con un token que tenga permisos sobre:
- *   - core_user_get_users
- *   - enrol_manual_enrol_users
- *   - core_enrol_get_enrolled_users
- *   - core_user_update_users
- */
-
 const axios = require('axios');
 
 function buildClient(moodleUrl, token) {
-  const endpoint = `${moodleUrl.replace(/\/$/, '')}/webservice/rest/server.php`;
+  const endpoint = moodleUrl.replace(/\/$/, '') + '/webservice/rest/server.php';
 
-  return async function callMoodle(wsfunction, params = {}) {
+  return async function callMoodle(wsfunction, params) {
+    params = params || {};
     const response = await axios.get(endpoint, {
-      params: {
+      params: Object.assign({
         wstoken: token,
-        wsfunction,
-        moodlewsrestformat: 'json',
-        ...params
-      }
+        wsfunction: wsfunction,
+        moodlewsrestformat: 'json'
+      }, params)
     });
-    if (response.data?.exception) {
-      throw new Error(`Moodle API error (${wsfunction}): ${response.data.message}`);
+    if (response.data && response.data.exception) {
+      throw new Error('Moodle API error (' + wsfunction + '): ' + response.data.message);
     }
     return response.data;
   };
 }
 
-/**
- * Suspende o activa la matrícula de un alumno en TODOS sus cursos.
- * suspend = true  -> bloquea acceso (moroso)
- * suspend = false -> restaura acceso (al día / plan de pago)
- */
-async function setEnrolmentSuspension({ moodleUrl, token, moodleUserId, suspend }) {
-  const call = buildClient(moodleUrl, token);
+const STUDENT_ROLE_ID = 5;
+const TEACHER_ROLE_ID = 3;
 
-  // 1. Obtener cursos en los que está matriculado
-  const courses = await call('core_enrol_get_users_courses', { userid: moodleUserId });
-
-  // 2. Actualizar el estado de matrícula (suspend: 1 = bloqueado, 0 = activo)
+async function setEnrolmentSuspension(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  const courses = await call('core_enrol_get_users_courses', { userid: opts.moodleUserId });
   const results = [];
   for (const course of courses) {
     const enrolments = await call('core_enrol_get_enrolled_users', { courseid: course.id });
-    const enrolment = enrolments.find(e => e.id === moodleUserId);
+    const enrolment = enrolments.find(function (e) { return e.id === opts.moodleUserId; });
     if (!enrolment) continue;
 
     const res = await call('enrol_manual_enrol_users', {
-      'enrolments[0][roleid]': 5, // 5 = student
-      'enrolments[0][userid]': moodleUserId,
+      'enrolments[0][roleid]': 5,
+      'enrolments[0][userid]': opts.moodleUserId,
       'enrolments[0][courseid]': course.id,
-      'enrolments[0][suspend]': suspend ? 1 : 0
+      'enrolments[0][suspend]': opts.suspend ? 1 : 0
     });
-    results.push({ courseId: course.id, res });
+    results.push({ courseId: course.id, res: res });
   }
   return results;
 }
 
-async function getUserByEmail({ moodleUrl, token, email }) {
-  const call = buildClient(moodleUrl, token);
+async function getUserByEmail(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
   const res = await call('core_user_get_users', {
     'criteria[0][key]': 'email',
-    'criteria[0][value]': email
+    'criteria[0][value]': opts.email
   });
-  return res.users?.[0] || null;
+  return (res.users && res.users[0]) || null;
 }
 
-/**
- * Lista todos los cursos del Moodle (excluye el curso 1, que es el sitio principal).
- */
-async function getCourses({ moodleUrl, token }) {
-  const call = buildClient(moodleUrl, token);
+async function getCourses(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
   const courses = await call('core_course_get_courses');
-  return courses.filter(c => c.id !== 1);
+  return courses.filter(function (c) { return c.id !== 1; });
 }
 
-/**
- * Lista los usuarios matriculados en un curso, con sus roles (student, editingteacher, etc.)
- */
-async function getEnrolledUsers({ moodleUrl, token, courseId }) {
-  const call = buildClient(moodleUrl, token);
-  return call('core_enrol_get_enrolled_users', { courseid: courseId });
+async function getEnrolledUsers(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  return call('core_enrol_get_enrolled_users', { courseid: opts.courseId });
+}
+
+async function createUser(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  const res = await call('core_user_create_users', {
+    'users[0][username]': opts.username,
+    'users[0][firstname]': opts.firstname,
+    'users[0][lastname]': opts.lastname,
+    'users[0][email]': opts.email,
+    'users[0][password]': opts.password,
+    'users[0][auth]': 'manual'
+  });
+  return res[0];
+}
+
+function generarPasswordSegura() {
+  const especiales = '!@#$%^&*';
+  const especial = especiales[Math.floor(Math.random() * especiales.length)];
+  return 'Aa1' + especial + Math.random().toString(36).slice(-6) + Math.random().toString(36).slice(-4).toUpperCase();
+}
+
+async function getOrCreateUser(opts) {
+  if (!opts.email) throw new Error('Se requiere un correo para crear el usuario en Moodle');
+
+  const existente = await getUserByEmail({ moodleUrl: opts.moodleUrl, token: opts.token, email: opts.email });
+  if (existente) return { id: existente.id, creado: false };
+
+  const partes = opts.nombreCompleto.trim().split(/\s+/);
+  const firstname = partes[0];
+  const lastname = partes.slice(1).join(' ') || partes[0];
+  const username = opts.email.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '') + Math.floor(Math.random() * 1000);
+  const password = generarPasswordSegura();
+
+  const creado = await createUser({
+    moodleUrl: opts.moodleUrl, token: opts.token, username: username,
+    firstname: firstname, lastname: lastname, email: opts.email, password: password
+  });
+  return { id: creado.id, creado: true, username: username, password: password };
+}
+
+async function enrolUser(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  return call('enrol_manual_enrol_users', {
+    'enrolments[0][roleid]': opts.roleId,
+    'enrolments[0][userid]': opts.userId,
+    'enrolments[0][courseid]': opts.courseId,
+    'enrolments[0][suspend]': opts.suspend || 0
+  });
 }
 
 module.exports = {
-  buildClient,
-  setEnrolmentSuspension,
-  getUserByEmail,
-  getCourses,
-  getEnrolledUsers
+  buildClient: buildClient,
+  setEnrolmentSuspension: setEnrolmentSuspension,
+  getUserByEmail: getUserByEmail,
+  getCourses: getCourses,
+  getEnrolledUsers: getEnrolledUsers,
+  createUser: createUser,
+  getOrCreateUser: getOrCreateUser,
+  enrolUser: enrolUser,
+  STUDENT_ROLE_ID: STUDENT_ROLE_ID,
+  TEACHER_ROLE_ID: TEACHER_ROLE_ID
 };
