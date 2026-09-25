@@ -1,6 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * ENDPOINT TEMPORAL — usar una sola vez para crear las tablas,
+ * luego eliminar este archivo y su registro en server.js por seguridad.
+ *
+ * Visitar en el navegador: https://TU-BACKEND.onrender.com/api/seed/schema
+ */
+router.get('/schema', async (req, res) => {
+  try {
+    const schemaPath = path.join(__dirname, '..', '..', 'db', 'schema.sql');
+    const sql = fs.readFileSync(schemaPath, 'utf8');
+    await pool.query(sql);
+    res.json({ mensaje: 'Esquema creado correctamente (tablas, tipos e índices).' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * ENDPOINT TEMPORAL — usar una sola vez para crear el colegio piloto,
