@@ -140,4 +140,18 @@ router.get('/importar-moodle', async (req, res) => {
   }
 });
 
+/**
+ * ENDPOINT TEMPORAL — amplía columnas que resultaron muy cortas para nombres reales de Moodle.
+ * Visitar en el navegador: https://TU-BACKEND.onrender.com/api/seed/fix-schema
+ */
+router.get('/fix-schema', async (req, res) => {
+  try {
+    await pool.query('ALTER TABLE grados ALTER COLUMN nombre TYPE VARCHAR(255)');
+    await pool.query('ALTER TABLE profesor_grado_materia ALTER COLUMN materia TYPE VARCHAR(255)');
+    res.json({ mensaje: 'Columnas ampliadas correctamente' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
