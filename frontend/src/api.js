@@ -1,6 +1,7 @@
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
-async function request(path, options = {}) {
+async function request(path, options) {
+  options = options || {};
   const res = await fetch(BASE + path, {
     headers: { 'Content-Type': 'application/json' },
     ...options
@@ -10,10 +11,14 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  grados: {
+    listar: (params) => request('/grados?' + new URLSearchParams(params))
+  },
   alumnos: {
     listar: (params) => request('/alumnos?' + new URLSearchParams(params)),
     detalle: (id) => request('/alumnos/' + id),
     crear: (data) => request('/alumnos', { method: 'POST', body: JSON.stringify(data) }),
+    matricular: (id, data) => request('/alumnos/' + id + '/matricular', { method: 'POST', body: JSON.stringify(data) }),
     evaluarEstado: (id) => request('/alumnos/' + id + '/evaluar-estado', { method: 'POST' })
   },
   profesores: {
