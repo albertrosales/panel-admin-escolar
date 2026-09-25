@@ -44,4 +44,20 @@ router.get('/colegio', async (req, res) => {
   }
 });
 
+/**
+ * ENDPOINT TEMPORAL — corrige el token del colegio piloto si quedó mal copiado.
+ * Visitar en el navegador: https://TU-BACKEND.onrender.com/api/seed/corregir-token
+ */
+router.get('/corregir-token', async (req, res) => {
+  try {
+    const { rows: [colegio] } = await pool.query(
+      `UPDATE colegios SET moodle_token = $1 WHERE id = 1 RETURNING *`,
+      [process.env.MOODLE_TOKEN_PILOTO]
+    );
+    res.json({ mensaje: 'Token actualizado', colegio });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
