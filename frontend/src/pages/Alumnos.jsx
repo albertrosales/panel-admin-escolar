@@ -18,7 +18,10 @@ export default function Alumnos() {
 
   return (
     <div>
-      <h2>Alumnos</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2>Alumnos</h2>
+        <Link to="/alumnos/nuevo"><button>+ Nuevo alumno</button></Link>
+      </div>
       <div className="card">
         <div style={{ marginBottom: 12 }}>
           <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
