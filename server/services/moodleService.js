@@ -67,8 +67,27 @@ async function getUserByEmail({ moodleUrl, token, email }) {
   return res.users?.[0] || null;
 }
 
+/**
+ * Lista todos los cursos del Moodle (excluye el curso 1, que es el sitio principal).
+ */
+async function getCourses({ moodleUrl, token }) {
+  const call = buildClient(moodleUrl, token);
+  const courses = await call('core_course_get_courses');
+  return courses.filter(c => c.id !== 1);
+}
+
+/**
+ * Lista los usuarios matriculados en un curso, con sus roles (student, editingteacher, etc.)
+ */
+async function getEnrolledUsers({ moodleUrl, token, courseId }) {
+  const call = buildClient(moodleUrl, token);
+  return call('core_enrol_get_enrolled_users', { courseid: courseId });
+}
+
 module.exports = {
   buildClient,
   setEnrolmentSuspension,
-  getUserByEmail
+  getUserByEmail,
+  getCourses,
+  getEnrolledUsers
 };
