@@ -3,21 +3,58 @@ const ORIGIN = BASE.replace(/\/api\/?$/, '');
 
 export function resolverUrlArchivo(url) {
   if (!url) return url;
-  if (/^https?:\/\//.test(url)) return url; // ya es absoluta
+  if (/^https?:\/\//.test(url)) return url;
   return ORIGIN + url;
+}
+
+function getToken() {
+  return localStorage.getItem('token');
+}
+
+export function guardarSesion(token, usuario) {
+  localStorage.setItem('token', token);
+  localStorage.setItem('usuario', JSON.stringify(usuario));
+}
+
+export function cerrarSesion() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('usuario');
+}
+
+export function obtenerUsuario() {
+  const raw = localStorage.getItem('usuario');
+  return raw ? JSON.parse(raw) : null;
+}
+
+export function haySesion() {
+  return !!getToken();
 }
 
 async function request(path, options) {
   options = options || {};
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
   const res = await fetch(BASE + path, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: headers,
     ...options
   });
+
+  if (res.status === 401) {
+    cerrarSesion();
+    window.location.href = '/login';
+    throw new Error('Sesión expirada');
+  }
+
   if (!res.ok) throw new Error((await res.json()).error || 'Error de red');
   return res.json();
 }
 
 export const api = {
+  auth: {
+    login: (correo, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) })
+  },
   grados: {
     listar: (params) => request('/grados?' + new URLSearchParams(params))
   },
