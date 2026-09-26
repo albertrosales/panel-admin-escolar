@@ -6,8 +6,10 @@ const { getOrCreateUser, enrolUser, TEACHER_ROLE_ID } = require('../services/moo
 router.get('/', async (req, res) => {
   try {
     const colegio_id = req.query.colegio_id;
+    const incluirInactivos = req.query.incluir_inactivos === 'true';
+    const condicion = incluirInactivos ? 'colegio_id = $1' : 'colegio_id = $1 AND activo = true';
     const result = await pool.query(
-      'SELECT * FROM profesores WHERE colegio_id = $1 ORDER BY nombre_completo',
+      `SELECT * FROM profesores WHERE ${condicion} ORDER BY nombre_completo`,
       [colegio_id]
     );
     res.json(result.rows);
@@ -19,9 +21,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    if (!/^\d+$/.test(id)) {
-      return res.status(400).json({ error: 'ID de profesor inválido' });
-    }
+    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'ID de profesor inválido' });
 
     const profesorResult = await pool.query('SELECT * FROM profesores WHERE id = $1', [id]);
     const profesor = profesorResult.rows[0];
@@ -49,37 +49,39 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const colegio_id = req.body.colegio_id;
-    const nombre_completo = req.body.nombre_completo;
-    const correo = req.body.correo;
-    const telefono = req.body.telefono;
-    const fecha_ingreso = req.body.fecha_ingreso;
-    const asignaciones = req.body.asignaciones || [];
-
-    if (!colegio_id || !nombre_completo || !fecha_ingreso) {
+    const b = req.body;
+    if (!b.colegio_id || !b.nombre_completo || !b.fecha_ingreso) {
       return res.status(400).json({ error: 'colegio_id, nombre_completo y fecha_ingreso son requeridos' });
     }
 
-    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [colegio_id]);
+    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [b.colegio_id]);
     const colegio = colegioResult.rows[0];
     if (!colegio) return res.status(400).json({ error: 'Colegio no encontrado' });
 
     let moodleInfo = null;
-    if (correo) {
+    if (b.correo) {
       try {
         moodleInfo = await getOrCreateUser({
           moodleUrl: colegio.moodle_url, token: colegio.moodle_token,
-          nombreCompleto: nombre_completo, email: correo
+          nombreCompleto: b.nombre_completo, email: b.correo
         });
       } catch (err) {
         return res.status(502).json({ error: 'Error creando usuario en Moodle: ' + err.message });
       }
     }
 
-    const materias = asignaciones.map(function (a) { return a.materia; });
+    const asignaciones = b.asignaciones || [];
+    const materias = asignaciones.map(a => a.materia);
     const profesorResult = await pool.query(
-      'INSERT INTO profesores (colegio_id, nombre_completo, correo, telefono, fecha_ingreso, materias, moodle_user_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [colegio_id, nombre_completo, correo, telefono, fecha_ingreso, materias, moodleInfo ? moodleInfo.id : null]
+      `INSERT INTO profesores (
+        colegio_id, nombre_completo, correo, telefono, fecha_ingreso, materias, moodle_user_id,
+        direccion, fecha_nacimiento, identidad, foto_url, es_extranjero
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [
+        b.colegio_id, b.nombre_completo, b.correo, b.telefono, b.fecha_ingreso, materias,
+        moodleInfo ? moodleInfo.id : null, b.direccion || null, b.fecha_nacimiento || null,
+        b.identidad || null, b.foto_url || null, !!b.es_extranjero
+      ]
     );
     const profesor = profesorResult.rows[0];
 
@@ -106,7 +108,63 @@ router.post('/', async (req, res) => {
       }
     }
 
-    res.status(201).json({ profesor: profesor, moodle: moodleInfo, erroresAsignacion: erroresAsignacion });
+    res.status(201).json({ profesor, moodle: moodleInfo, erroresAsignacion });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const campos = ['nombre_completo', 'correo', 'telefono', 'direccion', 'fecha_nacimiento',
+      'identidad', 'foto_url', 'es_extranjero'];
+    const sets = [];
+    const params = [];
+    for (const campo of campos) {
+      if (req.body[campo] !== undefined) {
+        params.push(req.body[campo]);
+        sets.push(campo + ' = $' + params.length);
+      }
+    }
+    if (sets.length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
+    params.push(id);
+
+    const result = await pool.query(
+      `UPDATE profesores SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Profesor no encontrado' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/dar-de-baja', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const motivo = req.body.motivo || null;
+    const result = await pool.query(
+      `UPDATE profesores SET activo = false, fecha_baja = CURRENT_DATE, motivo_baja = $1 WHERE id = $2 RETURNING *`,
+      [motivo, id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Profesor no encontrado' });
+    res.json({ profesor: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/reactivar', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await pool.query(
+      `UPDATE profesores SET activo = true, fecha_baja = NULL, motivo_baja = NULL WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Profesor no encontrado' });
+    res.json({ profesor: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -115,11 +173,9 @@ router.post('/', async (req, res) => {
 router.post('/:id/resenas', async (req, res) => {
   try {
     const id = req.params.id;
-    const autor = req.body.autor;
-    const comentario = req.body.comentario;
     const resenaResult = await pool.query(
-      'INSERT INTO profesor_resenas (profesor_id, autor, comentario) VALUES ($1,$2,$3) RETURNING *',
-      [id, autor, comentario]
+      `INSERT INTO profesor_resenas (profesor_id, autor, comentario) VALUES ($1,$2,$3) RETURNING *`,
+      [id, req.body.autor, req.body.comentario]
     );
     res.status(201).json(resenaResult.rows[0]);
   } catch (err) {
