@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { LayoutDashboard, Users, GraduationCap, LogOut } from 'lucide-react';
 import { haySesion, cerrarSesion, obtenerUsuario } from './api';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -32,12 +33,22 @@ export default function App() {
               <div className="layout">
                 <aside className="sidebar">
                   <h1>Campus Virtual</h1>
-                  <NavLink to="/" end>Resumen</NavLink>
-                  <NavLink to="/alumnos">Alumnos</NavLink>
-                  <NavLink to="/profesores">Profesores</NavLink>
-                  <div style={{ marginTop: 'auto', paddingTop: 24 }}>
-                    {usuario && <p style={{ fontSize: 13, color: 'var(--text-dim)' }}>{usuario.nombre}</p>}
-                    <button className="secondary" onClick={salir}>Cerrar sesión</button>
+                  <nav className="flex md:flex-col gap-1 flex-1">
+                    <NavLink to="/" end>
+                      <LayoutDashboard size={17} strokeWidth={2} /> <span className="hidden sm:inline">Resumen</span>
+                    </NavLink>
+                    <NavLink to="/alumnos">
+                      <Users size={17} strokeWidth={2} /> <span className="hidden sm:inline">Alumnos</span>
+                    </NavLink>
+                    <NavLink to="/profesores">
+                      <GraduationCap size={17} strokeWidth={2} /> <span className="hidden sm:inline">Profesores</span>
+                    </NavLink>
+                  </nav>
+                  <div className="mt-auto pt-6 hidden md:block">
+                    {usuario && <p className="text-xs text-gray-500 px-3 mb-2">{usuario.nombre}</p>}
+                    <button className="secondary w-full flex items-center justify-center gap-2" onClick={salir}>
+                      <LogOut size={15} /> Cerrar sesión
+                    </button>
                   </div>
                 </aside>
                 <main className="content">
