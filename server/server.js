@@ -10,6 +10,7 @@ const pagosRoutes = require('./routes/pagos');
 const reportesRoutes = require('./routes/reportes');
 const gradosRoutes = require('./routes/grados');
 const adminRoutes = require('./routes/admin');
+const estadisticasRoutes = require('./routes/estadisticas');
 const requireAuth = require('./middleware/auth');
 const revisarPagos = require('./jobs/revisarPagos');
 
@@ -28,6 +29,7 @@ app.use('/api/pagos', requireAuth, pagosRoutes);
 app.use('/api/reportes', requireAuth, reportesRoutes);
 app.use('/api/grados', requireAuth, gradosRoutes);
 app.use('/api/admin', requireAuth, adminRoutes);
+app.use('/api/estadisticas', requireAuth, estadisticasRoutes);
 
 cron.schedule('0 6 * * *', () => {
   revisarPagos().catch(err => console.error('Error en cron de pagos:', err));
