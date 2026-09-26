@@ -199,4 +199,13 @@ router.get('/crear-admin-inicial', async (req, res) => {
   }
 });
 
+router.get('/reset-admin', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM usuarios_admin');
+    res.json({ mensaje: 'Usuarios admin eliminados. Ya puedes crear uno nuevo con /crear-admin-inicial' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
