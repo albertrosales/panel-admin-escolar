@@ -26,7 +26,7 @@ export default function AlumnoDetalle() {
       const fn = tipo === 'constancia' ? api.reportes.constancia : api.reportes.reportePago;
       const doc = await fn(id);
       setMensaje('Documento generado.');
-      window.open(doc.archivo_url, '_blank');
+window.open(resolverUrlArchivo(doc.archivo_url), '_blank');
       cargar();
     } catch (e) {
       setMensaje(`Error: ${e.message}`);
