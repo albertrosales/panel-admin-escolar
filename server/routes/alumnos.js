@@ -2,18 +2,20 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { evaluarEstadoAlumno } = require('../services/estadoPagoService');
-const { getOrCreateUser, enrolUser, STUDENT_ROLE_ID } = require('../services/moodleService');
+const { getOrCreateUser, enrolUser, setEnrolmentSuspension, STUDENT_ROLE_ID } = require('../services/moodleService');
 
 router.get('/', async (req, res) => {
   try {
     const colegio_id = req.query.colegio_id;
     const estado_pago = req.query.estado_pago;
     const grado_id = req.query.grado_id;
+    const incluirInactivos = req.query.incluir_inactivos === 'true';
 
     const conditions = ['a.colegio_id = $1'];
     const params = [colegio_id];
     let join = '';
 
+    if (!incluirInactivos) conditions.push('a.activo = true');
     if (estado_pago) {
       params.push(estado_pago);
       conditions.push('a.estado_pago = $' + params.length);
@@ -68,32 +70,22 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const colegio_id = req.body.colegio_id;
-    const nombre_completo = req.body.nombre_completo;
-    const nombre_encargado = req.body.nombre_encargado;
-    const telefono_encargado = req.body.telefono_encargado;
-    const correo_encargado = req.body.correo_encargado;
-    const correo_alumno = req.body.correo_alumno;
-    const gradoIds = req.body.grados || [];
-
-    if (!colegio_id || !nombre_completo) {
+    const b = req.body;
+    if (!b.colegio_id || !b.nombre_completo) {
       return res.status(400).json({ error: 'colegio_id y nombre_completo son requeridos' });
     }
 
-    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [colegio_id]);
+    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [b.colegio_id]);
     const colegio = colegioResult.rows[0];
     if (!colegio) return res.status(400).json({ error: 'Colegio no encontrado' });
 
     let moodleInfo = null;
-    const correoParaMoodle = correo_alumno || correo_encargado;
-
+    const correoParaMoodle = b.correo_alumno || b.correo_encargado;
     if (correoParaMoodle) {
       try {
         moodleInfo = await getOrCreateUser({
-          moodleUrl: colegio.moodle_url,
-          token: colegio.moodle_token,
-          nombreCompleto: nombre_completo,
-          email: correoParaMoodle
+          moodleUrl: colegio.moodle_url, token: colegio.moodle_token,
+          nombreCompleto: b.nombre_completo, email: correoParaMoodle
         });
       } catch (err) {
         return res.status(502).json({ error: 'Error creando usuario en Moodle: ' + err.message });
@@ -101,17 +93,26 @@ router.post('/', async (req, res) => {
     }
 
     let grados = [];
+    const gradoIds = b.grados || [];
     if (gradoIds.length) {
       const gradosResult = await pool.query(
         'SELECT * FROM grados WHERE id = ANY($1) AND colegio_id = $2',
-        [gradoIds, colegio_id]
+        [gradoIds, b.colegio_id]
       );
       grados = gradosResult.rows;
     }
 
     const alumnoResult = await pool.query(
-      'INSERT INTO alumnos (colegio_id, grado_id, nombre_completo, nombre_encargado, telefono_encargado, correo_encargado, moodle_user_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-      [colegio_id, grados[0] ? grados[0].id : null, nombre_completo, nombre_encargado, telefono_encargado, correo_encargado, moodleInfo ? moodleInfo.id : null]
+      `INSERT INTO alumnos (
+        colegio_id, grado_id, nombre_completo, nombre_encargado, telefono_encargado, correo_encargado,
+        telefono, direccion, fecha_nacimiento, identidad, foto_url, es_extranjero, moodle_user_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [
+        b.colegio_id, grados[0] ? grados[0].id : null, b.nombre_completo, b.nombre_encargado,
+        b.telefono_encargado, b.correo_encargado, b.telefono || null, b.direccion || null,
+        b.fecha_nacimiento || null, b.identidad || null, b.foto_url || null,
+        !!b.es_extranjero, moodleInfo ? moodleInfo.id : null
+      ]
     );
     const alumno = alumnoResult.rows[0];
 
@@ -139,11 +140,91 @@ router.post('/', async (req, res) => {
     );
 
     res.status(201).json({
-      alumno: alumno,
-      moodle: moodleInfo,
-      clasesMatriculadas: grados.map(function (g) { return g.nombre; }),
-      erroresMatricula: erroresMatricula
+      alumno, moodle: moodleInfo,
+      clasesMatriculadas: grados.map(g => g.nombre),
+      erroresMatricula
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Editar datos de perfil (no toca matrícula ni Moodle)
+router.patch('/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const campos = ['nombre_completo', 'nombre_encargado', 'telefono_encargado', 'correo_encargado',
+      'telefono', 'direccion', 'fecha_nacimiento', 'identidad', 'foto_url', 'es_extranjero'];
+    const sets = [];
+    const params = [];
+    for (const campo of campos) {
+      if (req.body[campo] !== undefined) {
+        params.push(req.body[campo]);
+        sets.push(campo + ' = $' + params.length);
+      }
+    }
+    if (sets.length === 0) return res.status(400).json({ error: 'Nada que actualizar' });
+    params.push(id);
+
+    const result = await pool.query(
+      `UPDATE alumnos SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Alumno no encontrado' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/dar-de-baja', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const motivo = req.body.motivo || null;
+
+    const alumnoResult = await pool.query('SELECT * FROM alumnos WHERE id = $1', [id]);
+    const alumno = alumnoResult.rows[0];
+    if (!alumno) return res.status(404).json({ error: 'Alumno no encontrado' });
+
+    const result = await pool.query(
+      `UPDATE alumnos SET activo = false, fecha_baja = CURRENT_DATE, motivo_baja = $1 WHERE id = $2 RETURNING *`,
+      [motivo, id]
+    );
+
+    if (alumno.moodle_user_id) {
+      const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [alumno.colegio_id]);
+      const colegio = colegioResult.rows[0];
+      try {
+        await setEnrolmentSuspension({
+          moodleUrl: colegio.moodle_url, token: colegio.moodle_token,
+          moodleUserId: alumno.moodle_user_id, suspend: true
+        });
+      } catch (err) {
+        // no bloqueamos la baja si Moodle falla, solo avisamos
+        return res.json({ alumno: result.rows[0], avisoMoodle: 'No se pudo suspender en Moodle: ' + err.message });
+      }
+    }
+
+    await pool.query(
+      "INSERT INTO alumno_historial (alumno_id, tipo, descripcion) VALUES ($1, 'cambio_estado', $2)",
+      [id, 'Alumno dado de baja' + (motivo ? ': ' + motivo : '')]
+    );
+
+    res.json({ alumno: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/:id/reactivar', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await pool.query(
+      `UPDATE alumnos SET activo = true, fecha_baja = NULL, motivo_baja = NULL WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Alumno no encontrado' });
+    res.json({ alumno: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -152,9 +233,7 @@ router.post('/', async (req, res) => {
 router.post('/:id/matricular', async (req, res) => {
   try {
     const id = req.params.id;
-    if (!/^\d+$/.test(id)) {
-      return res.status(400).json({ error: 'ID de alumno inválido' });
-    }
+    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'ID de alumno inválido' });
     const gradoIds = req.body.grados || [];
 
     const alumnoResult = await pool.query('SELECT * FROM alumnos WHERE id = $1', [id]);
@@ -184,11 +263,7 @@ router.post('/:id/matricular', async (req, res) => {
       }
     }
 
-    res.json({
-      mensaje: 'Matrícula actualizada',
-      clasesAgregadas: grados.map(function (g) { return g.nombre; }),
-      erroresMatricula: erroresMatricula
-    });
+    res.json({ mensaje: 'Matrícula actualizada', clasesAgregadas: grados.map(g => g.nombre), erroresMatricula });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
