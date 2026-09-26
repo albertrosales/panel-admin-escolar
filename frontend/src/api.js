@@ -36,17 +36,13 @@ async function request(path, options) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = 'Bearer ' + token;
 
-  const res = await fetch(BASE + path, {
-    headers: headers,
-    ...options
-  });
+  const res = await fetch(BASE + path, { headers, ...options });
 
   if (res.status === 401) {
     cerrarSesion();
     window.location.href = '/login';
     throw new Error('Sesión expirada');
   }
-
   if (!res.ok) throw new Error((await res.json()).error || 'Error de red');
   return res.json();
 }
@@ -62,14 +58,20 @@ export const api = {
     listar: (params) => request('/alumnos?' + new URLSearchParams(params)),
     detalle: (id) => request('/alumnos/' + id),
     crear: (data) => request('/alumnos', { method: 'POST', body: JSON.stringify(data) }),
+    actualizar: (id, data) => request('/alumnos/' + id, { method: 'PATCH', body: JSON.stringify(data) }),
     matricular: (id, data) => request('/alumnos/' + id + '/matricular', { method: 'POST', body: JSON.stringify(data) }),
-    evaluarEstado: (id) => request('/alumnos/' + id + '/evaluar-estado', { method: 'POST' })
+    evaluarEstado: (id) => request('/alumnos/' + id + '/evaluar-estado', { method: 'POST' }),
+    darDeBaja: (id, motivo) => request('/alumnos/' + id + '/dar-de-baja', { method: 'POST', body: JSON.stringify({ motivo }) }),
+    reactivar: (id) => request('/alumnos/' + id + '/reactivar', { method: 'POST' })
   },
   profesores: {
     listar: (params) => request('/profesores?' + new URLSearchParams(params)),
     detalle: (id) => request('/profesores/' + id),
     crear: (data) => request('/profesores', { method: 'POST', body: JSON.stringify(data) }),
-    agregarResena: (id, data) => request('/profesores/' + id + '/resenas', { method: 'POST', body: JSON.stringify(data) })
+    actualizar: (id, data) => request('/profesores/' + id, { method: 'PATCH', body: JSON.stringify(data) }),
+    agregarResena: (id, data) => request('/profesores/' + id + '/resenas', { method: 'POST', body: JSON.stringify(data) }),
+    darDeBaja: (id, motivo) => request('/profesores/' + id + '/dar-de-baja', { method: 'POST', body: JSON.stringify({ motivo }) }),
+    reactivar: (id) => request('/profesores/' + id + '/reactivar', { method: 'POST' })
   },
   pagos: {
     crear: (data) => request('/pagos', { method: 'POST', body: JSON.stringify(data) }),
@@ -81,5 +83,11 @@ export const api = {
     constancia: (alumnoId) => request('/reportes/constancia/' + alumnoId, { method: 'POST' }),
     reportePago: (alumnoId) => request('/reportes/reporte-pago/' + alumnoId, { method: 'POST' }),
     informeDocente: (profesorId) => request('/reportes/informe-docente/' + profesorId, { method: 'POST' })
+  },
+  estadisticas: {
+    resumen: (colegio_id) => request('/estadisticas/resumen?colegio_id=' + colegio_id),
+    ingresosPorMes: (colegio_id) => request('/estadisticas/ingresos-por-mes?colegio_id=' + colegio_id),
+    alumnosNuevosPorMes: (colegio_id) => request('/estadisticas/alumnos-nuevos-por-mes?colegio_id=' + colegio_id),
+    bajasPorMes: (colegio_id) => request('/estadisticas/bajas-por-mes?colegio_id=' + colegio_id)
   }
 };
