@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, LogOut } from 'lucide-react';
 import { haySesion, cerrarSesion, obtenerUsuario } from './api';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -8,6 +8,7 @@ import AlumnoDetalle from './pages/AlumnoDetalle';
 import NuevoAlumno from './pages/NuevoAlumno';
 import Profesores from './pages/Profesores';
 import NuevoProfesor from './pages/NuevoProfesor';
+import NuevoUsuario from './pages/NuevoUsuario';
 
 function RutaProtegida({ children }) {
   if (!haySesion()) return <Navigate to="/login" replace />;
@@ -43,6 +44,9 @@ export default function App() {
                     <NavLink to="/profesores">
                       <GraduationCap size={17} strokeWidth={2} /> <span className="hidden sm:inline">Profesores</span>
                     </NavLink>
+                    <NavLink to="/usuarios/nuevo">
+                      <UserPlus size={17} strokeWidth={2} /> <span className="hidden sm:inline">Nuevo usuario</span>
+                    </NavLink>
                   </nav>
                   <div className="mt-auto pt-6 hidden md:block">
                     {usuario && <p className="text-xs text-gray-500 px-3 mb-2">{usuario.nombre}</p>}
@@ -59,6 +63,7 @@ export default function App() {
                     <Route path="/alumnos/:id" element={<AlumnoDetalle />} />
                     <Route path="/profesores" element={<Profesores />} />
                     <Route path="/profesores/nuevo" element={<NuevoProfesor />} />
+                    <Route path="/usuarios/nuevo" element={<NuevoUsuario />} />
                   </Routes>
                 </main>
               </div>
