@@ -7,8 +7,11 @@ const COLEGIO_ID = 1;
 export default function NuevoProfesor() {
   const navigate = useNavigate();
   const [grados, setGrados] = useState([]);
-  const [form, setForm] = useState({ nombre_completo: '', correo: '', telefono: '', fecha_ingreso: '' });
-  const [asignaciones, setAsignaciones] = useState({}); // { grado_id: materia }
+  const [form, setForm] = useState({
+    nombre_completo: '', correo: '', telefono: '', fecha_ingreso: '',
+    direccion: '', fecha_nacimiento: '', identidad: '', es_extranjero: false
+  });
+  const [asignaciones, setAsignaciones] = useState({});
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [resultado, setResultado] = useState(null);
@@ -23,11 +26,8 @@ export default function NuevoProfesor() {
 
   function toggleClase(gradoId, nombreGrado) {
     const copia = { ...asignaciones };
-    if (gradoId in copia) {
-      delete copia[gradoId];
-    } else {
-      copia[gradoId] = nombreGrado;
-    }
+    if (gradoId in copia) delete copia[gradoId];
+    else copia[gradoId] = nombreGrado;
     setAsignaciones(copia);
   }
 
@@ -69,7 +69,7 @@ export default function NuevoProfesor() {
           <p><strong>{resultado.profesor.nombre_completo}</strong> fue registrado correctamente.</p>
 
           {resultado.moodle && resultado.moodle.creado && (
-            <div style={{ marginTop: 16, padding: 12, background: 'rgba(255,200,0,0.1)', borderRadius: 8 }}>
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p><strong>Se creó un usuario nuevo en Moodle. Copia estos datos ahora, no se volverán a mostrar:</strong></p>
               <p>Usuario: <code>{resultado.moodle.username}</code></p>
               <p>Contraseña: <code>{resultado.moodle.password}</code></p>
@@ -77,7 +77,7 @@ export default function NuevoProfesor() {
           )}
 
           {resultado.erroresAsignacion && resultado.erroresAsignacion.length > 0 && (
-            <div style={{ marginTop: 12, color: '#c0392b' }}>
+            <div className="mt-3 text-red-600">
               <p>Hubo problemas asignando algunas clases:</p>
               <ul>
                 {resultado.erroresAsignacion.map((e, i) => <li key={i}>{e.grado}: {e.error}</li>)}
@@ -85,7 +85,7 @@ export default function NuevoProfesor() {
             </div>
           )}
 
-          <div style={{ marginTop: 16 }}>
+          <div className="mt-4">
             <button onClick={() => navigate('/profesores')}>Volver a la lista</button>
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function NuevoProfesor() {
     <div>
       <h2>Nuevo profesor</h2>
       <form className="card" onSubmit={enviar}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 480 }}>
+        <div className="flex flex-col gap-3 max-w-lg">
           <label>
             Nombre completo *
             <input value={form.nombre_completo} onChange={(e) => actualizar('nombre_completo', e.target.value)} />
@@ -106,32 +106,57 @@ export default function NuevoProfesor() {
             Correo (para crear su acceso a Moodle)
             <input value={form.correo} onChange={(e) => actualizar('correo', e.target.value)} />
           </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label>
+              Teléfono
+              <input value={form.telefono} onChange={(e) => actualizar('telefono', e.target.value)} />
+            </label>
+            <label>
+              Fecha de ingreso *
+              <input type="date" value={form.fecha_ingreso} onChange={(e) => actualizar('fecha_ingreso', e.target.value)} />
+            </label>
+          </div>
+
           <label>
-            Teléfono
-            <input value={form.telefono} onChange={(e) => actualizar('telefono', e.target.value)} />
-          </label>
-          <label>
-            Fecha de ingreso *
-            <input type="date" value={form.fecha_ingreso} onChange={(e) => actualizar('fecha_ingreso', e.target.value)} />
+            Dirección
+            <input value={form.direccion} onChange={(e) => actualizar('direccion', e.target.value)} />
           </label>
 
-          <div>
-            <p style={{ marginBottom: 6 }}>Clases que imparte</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="grid grid-cols-2 gap-3 items-end">
+            <label>
+              Fecha de nacimiento
+              <input type="date" value={form.fecha_nacimiento} onChange={(e) => actualizar('fecha_nacimiento', e.target.value)} />
+            </label>
+            <label>
+              Número de identidad / DNI
+              <input value={form.identidad} onChange={(e) => actualizar('identidad', e.target.value)} />
+            </label>
+          </div>
+
+          <label className="flex-row items-center gap-2 !flex-row">
+            <input
+              type="checkbox"
+              className="w-auto"
+              checked={form.es_extranjero}
+              onChange={(e) => actualizar('es_extranjero', e.target.checked)}
+            />
+            Profesor extranjero
+          </label>
+
+          <div className="border-t border-gray-200 pt-4 mt-1">
+            <p className="mb-2 text-xs font-medium text-gray-500">Clases que imparte</p>
+            <div className="flex flex-col gap-2">
               {grados.map((g) => (
-                <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={g.id in asignaciones}
-                    onChange={() => toggleClase(g.id, g.nombre)}
-                  />
-                  <span style={{ minWidth: 220, fontSize: 14 }}>{g.nombre}</span>
+                <div key={g.id} className="flex items-center gap-2">
+                  <input type="checkbox" className="w-auto" checked={g.id in asignaciones} onChange={() => toggleClase(g.id, g.nombre)} />
+                  <span className="min-w-[220px] text-sm">{g.nombre}</span>
                   {g.id in asignaciones && (
                     <input
                       placeholder="Materia (ej: Matemáticas)"
                       value={asignaciones[g.id]}
                       onChange={(e) => cambiarMateria(g.id, e.target.value)}
-                      style={{ flex: 1 }}
+                      className="flex-1"
                     />
                   )}
                 </div>
@@ -139,7 +164,7 @@ export default function NuevoProfesor() {
             </div>
           </div>
 
-          {error && <p style={{ color: '#c0392b' }}>{error}</p>}
+          {error && <p className="text-red-600">{error}</p>}
 
           <button type="submit" disabled={cargando}>{cargando ? 'Guardando...' : 'Crear profesor'}</button>
         </div>
