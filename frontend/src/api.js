@@ -1,4 +1,11 @@
 const BASE = import.meta.env.VITE_API_URL || '/api';
+const ORIGIN = BASE.replace(/\/api\/?$/, '');
+
+export function resolverUrlArchivo(url) {
+  if (!url) return url;
+  if (/^https?:\/\//.test(url)) return url; // ya es absoluta
+  return ORIGIN + url;
+}
 
 async function request(path, options) {
   options = options || {};
