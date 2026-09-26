@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, resolverUrlArchivo } from '../api';
 import EstadoBadge from '../components/EstadoBadge';
 import SelectorClases from '../components/SelectorClases';
 
