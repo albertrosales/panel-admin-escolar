@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, resolverUrlArchivo } from '../api';
 
 const COLEGIO_ID = 1;
 
@@ -29,7 +29,7 @@ export default function Profesores() {
 
   async function generarInforme(id) {
     const doc = await api.reportes.informeDocente(id);
-    window.open(doc.archivo_url, '_blank');
+window.open(resolverUrlArchivo(doc.archivo_url), '_blank');
   }
 
   return (
