@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 router.get('/schema', async (req, res) => {
   try {
@@ -165,6 +166,34 @@ router.get('/migrar-matriculas', async (req, res) => {
       'ON CONFLICT (alumno_id, grado_id) DO NOTHING;'
     );
     res.json({ mensaje: 'Tabla matriculas creada y datos existentes migrados.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/crear-admin-inicial', async (req, res) => {
+  try {
+    const existentesResult = await pool.query('SELECT * FROM usuarios_admin');
+    if (existentesResult.rows.length > 0) {
+      return res.json({ mensaje: 'Ya existe al menos un usuario admin, no se creó otro.' });
+    }
+
+    const correo = req.query.correo;
+    const password = req.query.password;
+    const nombre = req.query.nombre || 'Administrador';
+
+    if (!correo || !password) {
+      return res.status(400).json({ error: 'Debes pasar ?correo=...&password=...&nombre=... en la URL' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      'INSERT INTO usuarios_admin (colegio_id, nombre, correo, password_hash, rol) VALUES ($1,$2,$3,$4,$5) RETURNING id, nombre, correo, rol',
+      [1, nombre, correo, hash, 'admin']
+    );
+
+    res.json({ mensaje: 'Usuario admin creado', usuario: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
