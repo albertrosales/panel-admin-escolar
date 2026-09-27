@@ -47,11 +47,6 @@ export default function Login() {
             <div className="ground"><div /></div>
           </div>
         </div>
-        <div className="login-visual-copy">
-          <span className="eyebrow">CAMPUS VIRTUAL</span>
-          <h1>Aprender también<br /><em>es construir.</em></h1>
-          <p>Tu espacio para administrar cursos, estudiantes y nuevas ideas.</p>
-        </div>
       </section>
 
       <section className="login-panel">
