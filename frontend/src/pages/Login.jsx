@@ -51,7 +51,6 @@ export default function Login() {
 
       <section className="login-panel">
         <form onSubmit={enviar} className="login-card">
-          <div className="brand-mark">CV</div>
           <p className="login-kicker">Panel administrativo</p>
           <h2>Bienvenido de nuevo</h2>
           <p className="login-muted">Ingresa para continuar al Campus Virtual.</p>
@@ -69,6 +68,9 @@ export default function Login() {
             </button>
           </div>
           <p className="login-footer">Acceso seguro · Campus Virtual</p>
+          <button type="button" className="support-button">
+            Soporte técnico <span aria-hidden="true">↗</span>
+          </button>
         </form>
       </section>
     </main>
