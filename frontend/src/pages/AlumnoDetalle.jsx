@@ -22,7 +22,7 @@ export default function AlumnoDetalle() {
   function cargar() {
     api.alumnos.detalle(id).then((data) => {
       setAlumno(data);
-      setForm({
+            setForm({
         nombre_completo: data.nombre_completo || '',
         telefono: data.telefono || '',
         direccion: data.direccion || '',
@@ -31,7 +31,9 @@ export default function AlumnoDetalle() {
         es_extranjero: !!data.es_extranjero,
         nombre_encargado: data.nombre_encargado || '',
         telefono_encargado: data.telefono_encargado || '',
-        correo_encargado: data.correo_encargado || ''
+        correo_encargado: data.correo_encargado || '',
+        fecha_matricula: data.fecha_matricula ? data.fecha_matricula.slice(0, 10) : '',
+        monto_mensualidad: data.monto_mensualidad || ''
       });
     });
     api.grados.listar({ colegio_id: COLEGIO_ID }).then(setTodosGrados);
