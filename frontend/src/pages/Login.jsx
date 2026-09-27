@@ -68,9 +68,9 @@ export default function Login() {
             </button>
           </div>
           <p className="login-footer">Acceso seguro · Campus Virtual</p>
-          <button type="button" className="support-button">
+          <a className="support-button" href="https://wa.me/50489012215" target="_blank" rel="noreferrer">
             Soporte técnico <span aria-hidden="true">↗</span>
-          </button>
+          </a>
         </form>
       </section>
     </main>
