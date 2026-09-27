@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut } from 'lucide-react';
 import { haySesion, cerrarSesion, obtenerUsuario } from './api';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -9,6 +9,8 @@ import NuevoAlumno from './pages/NuevoAlumno';
 import Profesores from './pages/Profesores';
 import NuevoProfesor from './pages/NuevoProfesor';
 import NuevoUsuario from './pages/NuevoUsuario';
+import Grados from './pages/Grados';
+import Configuracion from './pages/Configuracion';
 
 function RutaProtegida({ children }) {
   if (!haySesion()) return <Navigate to="/login" replace />;
@@ -44,8 +46,14 @@ export default function App() {
                     <NavLink to="/profesores">
                       <GraduationCap size={17} strokeWidth={2} /> <span className="hidden sm:inline">Profesores</span>
                     </NavLink>
+                    <NavLink to="/grados">
+                      <BookOpen size={17} strokeWidth={2} /> <span className="hidden sm:inline">Clases</span>
+                    </NavLink>
                     <NavLink to="/usuarios/nuevo">
                       <UserPlus size={17} strokeWidth={2} /> <span className="hidden sm:inline">Nuevo usuario</span>
+                    </NavLink>
+                    <NavLink to="/configuracion">
+                      <Settings size={17} strokeWidth={2} /> <span className="hidden sm:inline">Configuración</span>
                     </NavLink>
                   </nav>
                   <div className="mt-auto pt-6 hidden md:block">
@@ -63,7 +71,9 @@ export default function App() {
                     <Route path="/alumnos/:id" element={<AlumnoDetalle />} />
                     <Route path="/profesores" element={<Profesores />} />
                     <Route path="/profesores/nuevo" element={<NuevoProfesor />} />
+                    <Route path="/grados" element={<Grados />} />
                     <Route path="/usuarios/nuevo" element={<NuevoUsuario />} />
+                    <Route path="/configuracion" element={<Configuracion />} />
                   </Routes>
                 </main>
               </div>
