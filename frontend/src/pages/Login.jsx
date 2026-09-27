@@ -34,19 +34,17 @@ export default function Login() {
           <span>npm run learn</span>
           <span>&lt;build future /&gt;</span>
         </div>
-        <div className="sheep-scene">
-          <div className="sheep-shadow" />
-          <div className="sheep">
-            <div className="sheep-ear sheep-ear-left" />
-            <div className="sheep-ear sheep-ear-right" />
-            <div className="sheep-head">
-              <i className="sheep-eye sheep-eye-left" />
-              <i className="sheep-eye sheep-eye-right" />
-              <i className="sheep-smile" />
-            </div>
-            <div className="sheep-wool"><b /><b /><b /><b /><b /></div>
-            <div className="sheep-leg sheep-leg-left" />
-            <div className="sheep-leg sheep-leg-right" />
+        <div className="loader-scene">
+          <div className="loader" aria-label="Animación de cubos">
+            <div className="box box0"><div /></div>
+            <div className="box box1"><div /></div>
+            <div className="box box2"><div /></div>
+            <div className="box box3"><div /></div>
+            <div className="box box4"><div /></div>
+            <div className="box box5"><div /></div>
+            <div className="box box6"><div /></div>
+            <div className="box box7"><div /></div>
+            <div className="ground"><div /></div>
           </div>
         </div>
         <div className="login-visual-copy">
