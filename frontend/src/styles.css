@@ -893,3 +893,20 @@
   }
 }
 
+
+
+/* Ajustes de composición del login */
+.login-shell { grid-template-columns: minmax(0, .78fr) minmax(420px, 1.22fr); }
+.login-visual { min-height:100vh; padding:2rem; }
+.login-visual-copy { display:none; }
+.loader-scene { top:50%; left:50%; right:auto; width:240px; height:240px; transform:translate(-50%, -50%) scale(.58); transform-origin:center; }
+.login-visual .loader { --primary:rgba(49,89,223,1); --primary-light:#6f8dff; --primary-rgba:rgba(49,89,223,0); }
+.login-panel { padding:clamp(2rem, 7vw, 7rem); }
+.login-card { width:min(100%, 430px); padding:0; }
+@media (max-width:800px) {
+  .login-shell { grid-template-columns:1fr; }
+  .login-visual { min-height:230px; }
+  .loader-scene { top:50%; left:50%; right:auto; transform:translate(-50%, -50%) scale(.38); }
+  .login-panel { min-height:calc(100vh - 230px); padding:2rem 1.5rem 3rem; }
+  .login-card { width:min(100%, 430px); }
+}
