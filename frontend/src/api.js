@@ -52,7 +52,8 @@ export const api = {
     login: (correo, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) })
   },
   grados: {
-    listar: (params) => request('/grados?' + new URLSearchParams(params))
+    listar: (params) => request('/grados?' + new URLSearchParams(params)),
+    crear: (data) => request('/grados', { method: 'POST', body: JSON.stringify(data) })
   },
   alumnos: {
     listar: (params) => request('/alumnos?' + new URLSearchParams(params)),
@@ -89,5 +90,10 @@ export const api = {
     ingresosPorMes: (colegio_id) => request('/estadisticas/ingresos-por-mes?colegio_id=' + colegio_id),
     alumnosNuevosPorMes: (colegio_id) => request('/estadisticas/alumnos-nuevos-por-mes?colegio_id=' + colegio_id),
     bajasPorMes: (colegio_id) => request('/estadisticas/bajas-por-mes?colegio_id=' + colegio_id)
+  },
+  admin: {
+    configurarDiaPago: (colegio_id, dia_pago_mensual) =>
+      request('/admin/configurar-dia-pago', { method: 'POST', body: JSON.stringify({ colegio_id, dia_pago_mensual }) }),
+    generarCobrosMensuales: () => request('/admin/generar-cobros-mensuales', { method: 'POST' })
   }
 };
