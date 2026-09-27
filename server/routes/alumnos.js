@@ -102,16 +102,20 @@ router.post('/', async (req, res) => {
       grados = gradosResult.rows;
     }
 
+    const fechaMatricula = b.fecha_matricula || new Date().toISOString().slice(0, 10);
+
     const alumnoResult = await pool.query(
       `INSERT INTO alumnos (
         colegio_id, grado_id, nombre_completo, nombre_encargado, telefono_encargado, correo_encargado,
-        telefono, direccion, fecha_nacimiento, identidad, foto_url, es_extranjero, moodle_user_id
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+        telefono, direccion, fecha_nacimiento, identidad, foto_url, es_extranjero, moodle_user_id,
+        fecha_matricula, monto_mensualidad
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [
         b.colegio_id, grados[0] ? grados[0].id : null, b.nombre_completo, b.nombre_encargado,
         b.telefono_encargado, b.correo_encargado, b.telefono || null, b.direccion || null,
         b.fecha_nacimiento || null, b.identidad || null, b.foto_url || null,
-        !!b.es_extranjero, moodleInfo ? moodleInfo.id : null
+        !!b.es_extranjero, moodleInfo ? moodleInfo.id : null,
+        fechaMatricula, b.monto_mensualidad || null
       ]
     );
     const alumno = alumnoResult.rows[0];
@@ -149,17 +153,17 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Editar datos de perfil (no toca matrícula ni Moodle)
 router.patch('/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const campos = ['nombre_completo', 'nombre_encargado', 'telefono_encargado', 'correo_encargado',
-      'telefono', 'direccion', 'fecha_nacimiento', 'identidad', 'foto_url', 'es_extranjero'];
+      'telefono', 'direccion', 'fecha_nacimiento', 'identidad', 'foto_url', 'es_extranjero',
+      'fecha_matricula', 'monto_mensualidad'];
     const sets = [];
     const params = [];
     for (const campo of campos) {
       if (req.body[campo] !== undefined) {
-        params.push(req.body[campo]);
+        params.push(req.body[campo] === '' ? null : req.body[campo]);
         sets.push(campo + ' = $' + params.length);
       }
     }
@@ -200,7 +204,6 @@ router.post('/:id/dar-de-baja', async (req, res) => {
           moodleUserId: alumno.moodle_user_id, suspend: true
         });
       } catch (err) {
-        // no bloqueamos la baja si Moodle falla, solo avisamos
         return res.json({ alumno: result.rows[0], avisoMoodle: 'No se pudo suspender en Moodle: ' + err.message });
       }
     }
