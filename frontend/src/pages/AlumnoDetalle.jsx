@@ -22,7 +22,7 @@ export default function AlumnoDetalle() {
   function cargar() {
     api.alumnos.detalle(id).then((data) => {
       setAlumno(data);
-            setForm({
+      setForm({
         nombre_completo: data.nombre_completo || '',
         telefono: data.telefono || '',
         direccion: data.direccion || '',
@@ -75,7 +75,10 @@ export default function AlumnoDetalle() {
   async function guardarEdicion() {
     setGuardando(true);
     try {
-      await api.alumnos.actualizar(id, form);
+      await api.alumnos.actualizar(id, {
+        ...form,
+        monto_mensualidad: form.monto_mensualidad === '' ? null : Number(form.monto_mensualidad)
+      });
       setEditando(false);
       cargar();
     } catch (e) {
@@ -159,6 +162,8 @@ export default function AlumnoDetalle() {
             <p><span className="text-gray-500">Fecha de nacimiento:</span> {alumno.fecha_nacimiento ? new Date(alumno.fecha_nacimiento).toLocaleDateString('es-HN') : '—'}</p>
             <p><span className="text-gray-500">Dirección:</span> {alumno.direccion || '—'}</p>
             <p><span className="text-gray-500">Identidad:</span> {alumno.identidad || '—'}</p>
+            <p><span className="text-gray-500">Ingreso:</span> {alumno.fecha_matricula ? new Date(alumno.fecha_matricula).toLocaleDateString('es-HN') : '—'}</p>
+            <p><span className="text-gray-500">Mensualidad:</span> {alumno.monto_mensualidad ? 'L. ' + Number(alumno.monto_mensualidad).toFixed(2) : 'No configurada'}</p>
             <p><span className="text-gray-500">Encargado:</span> {alumno.nombre_encargado || '—'}</p>
             <p><span className="text-gray-500">Tel. encargado:</span> {alumno.telefono_encargado || '—'}</p>
             <p><span className="text-gray-500">Correo encargado:</span> {alumno.correo_encargado || '—'}</p>
@@ -191,6 +196,16 @@ export default function AlumnoDetalle() {
               <label className="flex-row items-center gap-2 !flex-row">
                 <input type="checkbox" className="w-auto" checked={form.es_extranjero} onChange={(e) => setForm({ ...form, es_extranjero: e.target.checked })} />
                 Extranjero
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                Fecha real de ingreso
+                <input type="date" value={form.fecha_matricula} onChange={(e) => setForm({ ...form, fecha_matricula: e.target.value })} />
+              </label>
+              <label>
+                Monto de mensualidad (L.)
+                <input type="number" step="0.01" value={form.monto_mensualidad} onChange={(e) => setForm({ ...form, monto_mensualidad: e.target.value })} />
               </label>
             </div>
             <label>
@@ -273,12 +288,3 @@ export default function AlumnoDetalle() {
               <tr key={h.id}>
                 <td>{new Date(h.fecha).toLocaleString('es-HN')}</td>
                 <td>{h.tipo}</td>
-                <td>{h.descripcion}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
