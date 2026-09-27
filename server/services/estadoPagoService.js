@@ -1,13 +1,6 @@
 const pool = require('../db');
 const { setEnrolmentSuspension } = require('./moodleService');
 
-/**
- * Revisa el estado de un alumno y lo actualiza + sincroniza con Moodle.
- * Reglas:
- *  - Tiene un plan de pago activo con cuotas al día -> 'plan_pago' (acceso habilitado, amarillo)
- *  - Sin pagos vencidos -> 'al_dia' (acceso habilitado)
- *  - Con pago vencido y sin plan de pago activo -> 'moroso' (acceso bloqueado)
- */
 async function evaluarEstadoAlumno(alumnoId) {
   const { rows: [alumno] } = await pool.query(
     'SELECT a.*, c.moodle_url, c.moodle_token FROM alumnos a JOIN colegios c ON c.id = a.colegio_id WHERE a.id = $1',
@@ -40,7 +33,6 @@ async function evaluarEstadoAlumno(alumnoId) {
   if (estadoCambio) {
     await pool.query('UPDATE alumnos SET estado_pago = $1 WHERE id = $2', [nuevoEstado, alumnoId]);
 
-    // Sincronizar con Moodle: solo 'moroso' bloquea el acceso
     if (alumno.moodle_user_id) {
       const suspend = nuevoEstado === 'moroso';
       await setEnrolmentSuspension({
@@ -66,10 +58,6 @@ async function evaluarEstadoAlumno(alumnoId) {
   return { alumnoId, estadoAnterior: alumno.estado_pago, estadoNuevo: nuevoEstado, cambio: estadoCambio };
 }
 
-/**
- * Job diario: revisa a todos los alumnos activos.
- * Se ejecuta con un cron (ver server/jobs/revisarPagos.js).
- */
 async function evaluarTodosLosAlumnos() {
   const { rows: alumnos } = await pool.query('SELECT id FROM alumnos WHERE activo = TRUE');
   const resultados = [];
@@ -83,4 +71,51 @@ async function evaluarTodosLosAlumnos() {
   return resultados;
 }
 
-module.exports = { evaluarEstadoAlumno, evaluarTodosLosAlumnos };
+/**
+ * Genera el cobro del mes actual para cada alumno activo que tenga
+ * monto_mensualidad definido, si todavía no existe un pago para ese periodo.
+ * El vencimiento se calcula según el día de pago fijo del colegio (dia_pago_mensual).
+ */
+async function generarCobrosMensuales() {
+  const { rows: colegios } = await pool.query('SELECT * FROM colegios WHERE activo = TRUE');
+  const hoy = new Date();
+  const periodo = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+  const generados = [];
+
+  for (const colegio of colegios) {
+    const diaPago = colegio.dia_pago_mensual || 5;
+
+    const { rows: alumnos } = await pool.query(
+      `SELECT * FROM alumnos WHERE colegio_id = $1 AND activo = TRUE AND monto_mensualidad IS NOT NULL`,
+      [colegio.id]
+    );
+
+    for (const alumno of alumnos) {
+      const { rows: existentes } = await pool.query(
+        `SELECT id FROM pagos WHERE alumno_id = $1 AND periodo = $2`,
+        [alumno.id, periodo]
+      );
+      if (existentes.length > 0) continue;
+
+      const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+      const diaVencimiento = Math.min(diaPago, ultimoDiaMes);
+      const fechaVencimiento = new Date(hoy.getFullYear(), hoy.getMonth(), diaVencimiento);
+
+      const { rows: [pago] } = await pool.query(
+        `INSERT INTO pagos (alumno_id, periodo, monto, fecha_vencimiento) VALUES ($1,$2,$3,$4) RETURNING *`,
+        [alumno.id, periodo, alumno.monto_mensualidad, fechaVencimiento]
+      );
+
+      await pool.query(
+        `INSERT INTO alumno_historial (alumno_id, tipo, descripcion, metadata) VALUES ($1,'pago',$2,$3)`,
+        [alumno.id, `Cobro de mensualidad generado para ${periodo}`, JSON.stringify({ monto: alumno.monto_mensualidad, pago_id: pago.id })]
+      );
+
+      generados.push(pago);
+    }
+  }
+
+  return generados;
+}
+
+module.exports = { evaluarEstadoAlumno, evaluarTodosLosAlumnos, generarCobrosMensuales };
