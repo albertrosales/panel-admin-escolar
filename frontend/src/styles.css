@@ -59,3 +59,44 @@
   }
   code { @apply bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded text-sm; }
 }
+
+/* Login */
+.login-shell { min-height:100vh; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr); background:#f7f8fb; }
+.login-visual { position:relative; overflow:hidden; min-height:100vh; padding:clamp(2rem,6vw,6rem); display:flex; flex-direction:column; justify-content:flex-end; color:#f6f8ff; background:radial-gradient(circle at 50% 35%,#283a69 0,#141b34 42%,#090d1c 100%); isolation:isolate; }
+.login-visual::before { content:""; position:absolute; inset:-20%; background:linear-gradient(120deg,transparent 35%,rgba(112,143,255,.14) 50%,transparent 65%); transform:translateX(-50%); animation:login-scan 9s ease-in-out infinite; z-index:-1; }
+.code-rain { position:absolute; inset:8% 8% auto; display:grid; gap:1.2rem; color:#9caee5; opacity:.24; font:500 .78rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; transform:rotate(-8deg); }
+.code-rain span { animation:code-drift 8s ease-in-out infinite; }
+.code-rain span:nth-child(2){animation-delay:-2s;margin-left:18%}.code-rain span:nth-child(3){animation-delay:-4s;margin-left:6%}.code-rain span:nth-child(4){animation-delay:-6s;margin-left:28%}
+.login-visual-copy { position:relative; z-index:2; max-width:540px; }
+.eyebrow { color:#9db5ff; letter-spacing:.18em; font-size:.72rem; font-weight:700; }
+.login-visual-copy h1 { margin:.9rem 0 1rem; color:#fff; font-size:clamp(2.5rem,5vw,5.4rem); line-height:.95; letter-spacing:-.06em; }
+.login-visual-copy h1 em { color:#aebdff; font-style:normal; }
+.login-visual-copy p { max-width:390px; color:#b8c2dc; font-size:1.05rem; line-height:1.6; }
+.login-panel { display:grid; place-items:center; padding:2rem; background:#fff; }
+.login-card { width:min(100%,390px); padding:clamp(1.5rem,4vw,3rem); }
+.brand-mark { display:grid; place-items:center; width:44px; height:44px; border-radius:14px; color:#fff; background:linear-gradient(135deg,#5a7cff,#2945c7); box-shadow:0 12px 24px rgba(55,82,210,.24); font-size:.8rem; font-weight:800; letter-spacing:.04em; }
+.login-kicker { margin:2rem 0 .55rem; color:#5673dd; font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.login-card h2 { margin:0; color:#131827; font-size:clamp(1.8rem,3vw,2.35rem); letter-spacing:-.045em; }
+.login-muted { margin:.7rem 0 2rem; color:#8991a5; line-height:1.5; }
+.login-fields { display:grid; gap:1rem; }
+.login-fields label { color:#68728a; font-size:.78rem; font-weight:700; }
+.login-fields input { margin-top:.45rem; width:100%; box-sizing:border-box; padding:.85rem 1rem; border:1px solid #e4e8f1; border-radius:12px; background:#fbfcff; color:#182033; transition:.2s ease; }
+.login-fields input:focus { border-color:#6681ed; box-shadow:0 0 0 4px rgba(102,129,237,.13); }
+.login-submit { width:100%; display:flex; justify-content:space-between; align-items:center; margin-top:.35rem; padding:.9rem 1rem; border-radius:12px; background:#3159df; box-shadow:0 10px 20px rgba(49,89,223,.22); }
+.login-submit:not(:disabled):hover { background:#264bd0; transform:translateY(-1px); }
+.login-error { margin:0; padding:.75rem .9rem; border-radius:10px; color:#b42318; background:#fff1f0; font-size:.78rem; }
+.login-footer { margin:2rem 0 0; color:#a2a9b8; font-size:.72rem; text-align:center; }
+.sheep-scene { position:absolute; top:14%; right:12%; width:290px; height:220px; animation:sheep-float 4.6s ease-in-out infinite; }
+.sheep-shadow { position:absolute; left:25px; bottom:15px; width:235px; height:24px; border-radius:50%; background:#02040d; opacity:.45; filter:blur(10px); animation:shadow-pulse 4.6s ease-in-out infinite; }
+.sheep { position:absolute; left:38px; top:30px; width:205px; height:145px; }
+.sheep-wool { position:absolute; left:28px; top:25px; width:155px; height:100px; border-radius:45%; background:#252d49; box-shadow:inset 8px 10px 0 rgba(118,143,222,.18),0 18px 28px rgba(0,0,0,.25); }
+.sheep-wool b { position:absolute; width:48px; height:48px; border-radius:50%; background:#303a5f; }.sheep-wool b:nth-child(1){left:6px;top:23px}.sheep-wool b:nth-child(2){left:39px;top:3px}.sheep-wool b:nth-child(3){left:79px;top:10px}.sheep-wool b:nth-child(4){left:111px;top:28px}.sheep-wool b:nth-child(5){left:53px;top:46px}
+.sheep-head { position:absolute; z-index:2; right:0; top:45px; width:78px; height:72px; border-radius:42% 45% 45% 38%; background:#111727; box-shadow:inset -7px -7px 0 #080b15; transform:rotate(6deg); }
+.sheep-ear { position:absolute; z-index:1; top:50px; width:34px; height:22px; border-radius:70% 30%; background:#101625; }.sheep-ear-left{right:61px;transform:rotate(-20deg)}.sheep-ear-right{right:-12px;transform:rotate(28deg)}
+.sheep-eye { position:absolute; top:28px; width:7px; height:10px; border-radius:50%; background:#a9c2ff; box-shadow:0 0 12px #8caeff; animation:sheep-blink 5s infinite; }.sheep-eye-left{left:22px}.sheep-eye-right{right:22px}
+.sheep-smile { position:absolute; left:31px; top:42px; width:17px; height:8px; border-bottom:2px solid #a9c2ff; border-radius:0 0 14px 14px; }
+.sheep-leg { position:absolute; top:117px; width:13px; height:34px; border-radius:0 0 8px 8px; background:#111727; }.sheep-leg-left{left:54px}.sheep-leg-right{left:133px}
+@keyframes sheep-float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-13px) rotate(2deg)}} @keyframes shadow-pulse{0%,100%{transform:scaleX(1);opacity:.45}50%{transform:scaleX(.8);opacity:.25}} @keyframes sheep-blink{0%,45%,49%,100%{transform:scaleY(1)}47%{transform:scaleY(.1)}} @keyframes login-scan{0%,100%{transform:translateX(-50%)}50%{transform:translateX(50%)}} @keyframes code-drift{0%,100%{transform:translateX(0)}50%{transform:translateX(14px)}
+}
+@media (max-width: 800px) { .login-shell{grid-template-columns:1fr}.login-visual{min-height:390px;padding:2rem}.sheep-scene{top:3%;right:5%;transform:scale(.7);transform-origin:top right}.login-visual-copy{margin-top:160px}.login-visual-copy h1{font-size:2.8rem}.login-panel{min-height:500px} }
+@media (prefers-reduced-motion: reduce) { .login-visual::before,.code-rain span,.sheep-scene,.sheep-shadow,.sheep-eye{animation:none} }
