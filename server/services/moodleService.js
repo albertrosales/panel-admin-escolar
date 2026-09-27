@@ -110,6 +110,30 @@ async function enrolUser(opts) {
   });
 }
 
+/**
+ * Lista las categorías de cursos de Moodle (ej: 7° GRADO, 8° GRADO, 9° GRADO).
+ */
+async function getCategories(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  const categorias = await call('core_course_get_categories');
+  return categorias.filter(function (c) { return c.visible !== 0; });
+}
+
+/**
+ * Crea un curso nuevo en Moodle, dentro de una categoría específica.
+ * Devuelve el curso creado (incluyendo su id).
+ */
+async function createCourse(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  const shortname = (opts.fullname + '-' + Date.now()).slice(0, 100).replace(/\s+/g, '-');
+  const res = await call('core_course_create_courses', {
+    'courses[0][fullname]': opts.fullname,
+    'courses[0][shortname]': shortname,
+    'courses[0][categoryid]': opts.categoryId
+  });
+  return res[0]; // { id, shortname }
+}
+
 module.exports = {
   buildClient: buildClient,
   setEnrolmentSuspension: setEnrolmentSuspension,
@@ -119,6 +143,8 @@ module.exports = {
   createUser: createUser,
   getOrCreateUser: getOrCreateUser,
   enrolUser: enrolUser,
+  getCategories: getCategories,
+  createCourse: createCourse,
   STUDENT_ROLE_ID: STUDENT_ROLE_ID,
   TEACHER_ROLE_ID: TEACHER_ROLE_ID
 };
