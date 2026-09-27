@@ -1010,3 +1010,7 @@
 @media (max-width:800px) {
   .loader-scene { transform:translate(-50%, -50%) scale(.28); }
 }
+
+
+.login-card h2 { font-weight:800; }
+.support-button { text-decoration:none; box-sizing:border-box; }
