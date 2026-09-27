@@ -910,3 +910,56 @@
   .login-panel { min-height:calc(100vh - 230px); padding:2rem 1.5rem 3rem; }
   .login-card { width:min(100%, 430px); }
 }
+
+
+/* Refinamiento visual del login: tarjeta limpia y fondo sólido */
+.login-visual { background:#111a38; }
+.login-visual::before { display:none; }
+.code-rain { display:none; }
+.login-visual .loader:before,
+.login-visual .loader:after { display:none; }
+.login-panel { background:#f7f8fb; }
+.login-card {
+  box-sizing:border-box;
+  width:min(100%,450px);
+  padding:30px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  border:1px solid #ededef;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 18px 50px rgba(20,35,75,.10);
+}
+.login-card .brand-mark { margin-bottom:6px; }
+.login-kicker { margin:0 0 2px; }
+.login-card h2 { font-size:1.85rem; margin:0; }
+.login-muted { margin:0 0 12px; }
+.login-fields { gap:10px; }
+.login-fields label { color:#151717; font-size:14px; font-weight:600; gap:6px; }
+.login-fields input {
+  box-sizing:border-box;
+  height:50px;
+  margin-top:0;
+  padding:0 14px;
+  border:1.5px solid #ecedec;
+  border-radius:10px;
+  background:#fff;
+  transition:.2s ease-in-out;
+}
+.login-fields input:focus { outline:none; border-color:#2d79f3; box-shadow:none; }
+.login-submit {
+  height:50px;
+  margin:10px 0 0;
+  border-radius:10px;
+  background:#151717;
+  box-shadow:none;
+  font-size:15px;
+  font-weight:500;
+}
+.login-submit:not(:disabled):hover { background:#252727; transform:none; }
+.login-error { margin:0; }
+.login-footer { margin:10px 0 0; }
+@media (max-width:800px) {
+  .login-card { padding:24px; }
+}
