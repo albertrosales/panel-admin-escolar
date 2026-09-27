@@ -18,7 +18,9 @@ export default function NuevoAlumno() {
     direccion: '',
     fecha_nacimiento: '',
     identidad: '',
-    es_extranjero: false
+    es_extranjero: false,
+    fecha_matricula: new Date().toISOString().slice(0, 10),
+    monto_mensualidad: ''
   });
   const [gradosSeleccionados, setGradosSeleccionados] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -45,6 +47,7 @@ export default function NuevoAlumno() {
       const res = await api.alumnos.crear({
         colegio_id: COLEGIO_ID,
         ...form,
+        monto_mensualidad: form.monto_mensualidad ? Number(form.monto_mensualidad) : null,
         grados: gradosSeleccionados
       });
       setResultado(res);
@@ -137,6 +140,23 @@ export default function NuevoAlumno() {
               />
               Alumno extranjero
             </label>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-1">
+            <p className="text-xs font-medium text-gray-500 mb-2">Matrícula y cobro (para migrar alumnos existentes)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                Fecha real de ingreso al colegio
+                <input type="date" value={form.fecha_matricula} onChange={(e) => actualizar('fecha_matricula', e.target.value)} />
+              </label>
+              <label>
+                Monto de mensualidad (L.)
+                <input type="number" step="0.01" placeholder="ej: 1500.00" value={form.monto_mensualidad} onChange={(e) => actualizar('monto_mensualidad', e.target.value)} />
+              </label>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Si defines un monto, el sistema generará su cobro automáticamente cada mes, con vencimiento en el día fijo configurado para el colegio.
+            </p>
           </div>
 
           <div className="border-t border-gray-200 pt-4 mt-1">
