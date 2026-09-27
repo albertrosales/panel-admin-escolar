@@ -172,4 +172,128 @@ export default function AlumnoDetalle() {
           <div className="flex flex-col gap-3 max-w-lg">
             <label>
               Nombre completo
-              <input
+              <input value={form.nombre_completo} onChange={(e) => setForm({ ...form, nombre_completo: e.target.value })} />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                Teléfono
+                <input value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+              </label>
+              <label>
+                Fecha de nacimiento
+                <input type="date" value={form.fecha_nacimiento} onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })} />
+              </label>
+            </div>
+            <label>
+              Dirección
+              <input value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
+            </label>
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <label>
+                Identidad
+                <input value={form.identidad} onChange={(e) => setForm({ ...form, identidad: e.target.value })} />
+              </label>
+              <label className="flex-row items-center gap-2 !flex-row">
+                <input type="checkbox" className="w-auto" checked={form.es_extranjero} onChange={(e) => setForm({ ...form, es_extranjero: e.target.checked })} />
+                Extranjero
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                Fecha real de ingreso
+                <input type="date" value={form.fecha_matricula} onChange={(e) => setForm({ ...form, fecha_matricula: e.target.value })} />
+              </label>
+              <label>
+                Monto de mensualidad (L.)
+                <input type="number" step="0.01" value={form.monto_mensualidad} onChange={(e) => setForm({ ...form, monto_mensualidad: e.target.value })} />
+              </label>
+            </div>
+            <label>
+              Nombre del encargado
+              <input value={form.nombre_encargado} onChange={(e) => setForm({ ...form, nombre_encargado: e.target.value })} />
+            </label>
+            <label>
+              Teléfono del encargado
+              <input value={form.telefono_encargado} onChange={(e) => setForm({ ...form, telefono_encargado: e.target.value })} />
+            </label>
+            <label>
+              Correo del encargado
+              <input value={form.correo_encargado} onChange={(e) => setForm({ ...form, correo_encargado: e.target.value })} />
+            </label>
+            <div className="flex gap-2 mt-1">
+              <button onClick={guardarEdicion} disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar cambios'}</button>
+              <button className="secondary" onClick={() => setEditando(false)}>Cancelar</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Clases matriculadas</h3>
+        {(alumno.clases || []).length === 0 && (
+          <p className="text-sm text-gray-500">Este alumno no está matriculado en ninguna clase todavía.</p>
+        )}
+        <ul>
+          {(alumno.clases || []).map((c) => (
+            <li key={c.id} className="text-sm">{c.nombre}</li>
+          ))}
+        </ul>
+
+        {gradosDisponibles.length > 0 && (
+          <div className="mt-4 border-t border-gray-200 pt-4">
+            <p className="mb-1.5">Matricular en clases adicionales</p>
+            <SelectorClases grados={gradosDisponibles} seleccionados={nuevasClases} onChange={setNuevasClases} />
+            <button className="mt-3" disabled={matriculando || nuevasClases.length === 0} onClick={matricularClases}>
+              {matriculando ? 'Matriculando...' : 'Matricular en las clases seleccionadas'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Documentos</h3>
+        <div className="flex gap-2">
+          <button onClick={() => generar('constancia')}>Generar constancia de estudio</button>
+          <button className="secondary" onClick={() => generar('reporte_pago')}>Generar reporte de pago</button>
+        </div>
+        {mensaje && <p className="text-sm text-gray-500 mt-2">{mensaje}</p>}
+      </div>
+
+      <div className="card">
+        <h3>Pagos</h3>
+        <table>
+          <thead>
+            <tr><th>Periodo</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th></th></tr>
+          </thead>
+          <tbody>
+            {alumno.pagos.map((p) => (
+              <tr key={p.id}>
+                <td>{p.periodo}</td>
+                <td>L. {p.monto}</td>
+                <td>{new Date(p.fecha_vencimiento).toLocaleDateString('es-HN')}</td>
+                <td>{p.pagado ? 'Pagado' : 'Pendiente'}</td>
+                <td>{!p.pagado && <button onClick={() => marcarPagado(p.id)}>Marcar pagado</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
+        <h3>Historial</h3>
+        <table>
+          <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th></tr></thead>
+          <tbody>
+            {alumno.historial.map((h) => (
+              <tr key={h.id}>
+                <td>{new Date(h.fecha).toLocaleString('es-HN')}</td>
+                <td>{h.tipo}</td>
+                <td>{h.descripcion}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
