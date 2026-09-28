@@ -7,6 +7,7 @@ export function resolverUrlArchivo(url) {
   return ORIGIN + url;
 }
 
+// ---------- Sesión de administración ----------
 function getToken() {
   return localStorage.getItem('token');
 }
@@ -30,6 +31,26 @@ export function haySesion() {
   return !!getToken();
 }
 
+// ---------- Sesión del portal (alumnos / profesores) ----------
+export function guardarSesionPortal(token, usuario) {
+  localStorage.setItem('portal_token', token);
+  localStorage.setItem('portal_usuario', JSON.stringify(usuario));
+}
+
+export function cerrarSesionPortal() {
+  localStorage.removeItem('portal_token');
+  localStorage.removeItem('portal_usuario');
+}
+
+export function obtenerUsuarioPortal() {
+  const raw = localStorage.getItem('portal_usuario');
+  return raw ? JSON.parse(raw) : null;
+}
+
+export function haySesionPortal() {
+  return !!localStorage.getItem('portal_token');
+}
+
 async function request(path, options) {
   options = options || {};
   const token = getToken();
@@ -47,9 +68,30 @@ async function request(path, options) {
   return res.json();
 }
 
+async function requestPortal(path, options) {
+  options = options || {};
+  const token = localStorage.getItem('portal_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  const res = await fetch(BASE + path, { headers, ...options });
+
+  if (res.status === 401 && path !== '/portal/login') {
+    cerrarSesionPortal();
+    window.location.href = '/portal/login';
+    throw new Error('Sesión expirada');
+  }
+  if (!res.ok) throw new Error((await res.json()).error || 'Error de red');
+  return res.json();
+}
+
 export const api = {
   auth: {
     login: (correo, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) })
+  },
+  portal: {
+    login: (username, password) => requestPortal('/portal/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+    me: () => requestPortal('/portal/me')
   },
   grados: {
     listar: (params) => request('/grados?' + new URLSearchParams(params)),
