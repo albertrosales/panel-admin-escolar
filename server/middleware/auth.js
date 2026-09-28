@@ -8,6 +8,10 @@ function requireAuth(req, res, next) {
   const token = header.slice(7);
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
+    // Solo tokens de administración: los del portal (alumno/profesor) no entran aquí
+    if (!payload.rol || payload.tipo) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
     req.usuario = payload;
     next();
   } catch (err) {
