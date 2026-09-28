@@ -4,6 +4,7 @@ const cors = require('cors');
 const cron = require('node-cron');
 
 const authRoutes = require('./routes/auth');
+const portalRoutes = require('./routes/portal');
 const alumnosRoutes = require('./routes/alumnos');
 const profesoresRoutes = require('./routes/profesores');
 const pagosRoutes = require('./routes/pagos');
@@ -22,6 +23,7 @@ app.use('/generated-pdfs', express.static('generated-pdfs'));
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/portal', portalRoutes);
 
 app.use('/api/alumnos', requireAuth, alumnosRoutes);
 app.use('/api/profesores', requireAuth, profesoresRoutes);
