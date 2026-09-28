@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut } from 'lucide-react';
-import { haySesion, cerrarSesion, obtenerUsuario } from './api';
+import { haySesion, haySesionPortal, cerrarSesion, obtenerUsuario } from './api';
 import Login from './pages/Login';
+import PortalLogin from './pages/PortalLogin';
+import Portal from './pages/Portal';
 import Dashboard from './pages/Dashboard';
 import Alumnos from './pages/Alumnos';
 import AlumnoDetalle from './pages/AlumnoDetalle';
@@ -17,6 +19,11 @@ function RutaProtegida({ children }) {
   return children;
 }
 
+function RutaPortal({ children }) {
+  if (!haySesionPortal()) return <Navigate to="/portal/login" replace />;
+  return children;
+}
+
 export default function App() {
   const usuario = obtenerUsuario();
 
@@ -29,6 +36,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/portal/login" element={<PortalLogin />} />
+        <Route path="/portal" element={<RutaPortal><Portal /></RutaPortal>} />
         <Route
           path="/*"
           element={
