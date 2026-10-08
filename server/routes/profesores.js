@@ -3,14 +3,27 @@ const router = express.Router();
 const pool = require('../db');
 const { getOrCreateUser, enrolUser, TEACHER_ROLE_ID } = require('../services/moodleService');
 
+// Toda ruta con :id verifica que el profesor sea del colegio de quien pide
+router.param('id', async (req, res, next, id) => {
+  try {
+    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'ID de profesor inválido' });
+    const r = await pool.query('SELECT colegio_id FROM profesores WHERE id = $1', [id]);
+    if (!r.rows[0] || Number(r.rows[0].colegio_id) !== req.colegioId) {
+      return res.status(404).json({ error: 'Profesor no encontrado' });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
     const incluirInactivos = req.query.incluir_inactivos === 'true';
     const condicion = incluirInactivos ? 'colegio_id = $1' : 'colegio_id = $1 AND activo = true';
     const result = await pool.query(
       `SELECT * FROM profesores WHERE ${condicion} ORDER BY nombre_completo`,
-      [colegio_id]
+      [req.colegioId]
     );
     res.json(result.rows);
   } catch (err) {
@@ -21,11 +34,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'ID de profesor inválido' });
-
     const profesorResult = await pool.query('SELECT * FROM profesores WHERE id = $1', [id]);
     const profesor = profesorResult.rows[0];
-    if (!profesor) return res.status(404).json({ error: 'Profesor no encontrado' });
 
     const asignacionesResult = await pool.query(
       'SELECT pgm.*, g.nombre AS grado_nombre FROM profesor_grado_materia pgm JOIN grados g ON g.id = pgm.grado_id WHERE pgm.profesor_id = $1',
@@ -50,11 +60,12 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const b = req.body;
-    if (!b.colegio_id || !b.nombre_completo || !b.fecha_ingreso) {
-      return res.status(400).json({ error: 'colegio_id, nombre_completo y fecha_ingreso son requeridos' });
+    const colegioId = req.colegioId;
+    if (!b.nombre_completo || !b.fecha_ingreso) {
+      return res.status(400).json({ error: 'nombre_completo y fecha_ingreso son requeridos' });
     }
 
-    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [b.colegio_id]);
+    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [colegioId]);
     const colegio = colegioResult.rows[0];
     if (!colegio) return res.status(400).json({ error: 'Colegio no encontrado' });
 
@@ -78,7 +89,7 @@ router.post('/', async (req, res) => {
         direccion, fecha_nacimiento, identidad, foto_url, es_extranjero
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
       [
-        b.colegio_id, b.nombre_completo, b.correo, b.telefono, b.fecha_ingreso, materias,
+        colegioId, b.nombre_completo, b.correo, b.telefono, b.fecha_ingreso, materias,
         moodleInfo ? moodleInfo.id : null, b.direccion || null, b.fecha_nacimiento || null,
         b.identidad || null, b.foto_url || null, !!b.es_extranjero
       ]
@@ -87,7 +98,10 @@ router.post('/', async (req, res) => {
 
     const erroresAsignacion = [];
     for (const asignacion of asignaciones) {
-      const gradoResult = await pool.query('SELECT * FROM grados WHERE id = $1', [asignacion.grado_id]);
+      const gradoResult = await pool.query(
+        'SELECT * FROM grados WHERE id = $1 AND colegio_id = $2',
+        [asignacion.grado_id, colegioId]
+      );
       const grado = gradoResult.rows[0];
       if (!grado) continue;
 
@@ -123,7 +137,7 @@ router.patch('/:id', async (req, res) => {
     const params = [];
     for (const campo of campos) {
       if (req.body[campo] !== undefined) {
-        params.push(req.body[campo]);
+        params.push(req.body[campo] === '' ? null : req.body[campo]);
         sets.push(campo + ' = $' + params.length);
       }
     }
@@ -134,7 +148,6 @@ router.patch('/:id', async (req, res) => {
       `UPDATE profesores SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
       params
     );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Profesor no encontrado' });
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -143,13 +156,10 @@ router.patch('/:id', async (req, res) => {
 
 router.post('/:id/dar-de-baja', async (req, res) => {
   try {
-    const id = req.params.id;
-    const motivo = req.body.motivo || null;
     const result = await pool.query(
       `UPDATE profesores SET activo = false, fecha_baja = CURRENT_DATE, motivo_baja = $1 WHERE id = $2 RETURNING *`,
-      [motivo, id]
+      [req.body.motivo || null, req.params.id]
     );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Profesor no encontrado' });
     res.json({ profesor: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -158,12 +168,10 @@ router.post('/:id/dar-de-baja', async (req, res) => {
 
 router.post('/:id/reactivar', async (req, res) => {
   try {
-    const id = req.params.id;
     const result = await pool.query(
       `UPDATE profesores SET activo = true, fecha_baja = NULL, motivo_baja = NULL WHERE id = $1 RETURNING *`,
-      [id]
+      [req.params.id]
     );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Profesor no encontrado' });
     res.json({ profesor: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -172,10 +180,9 @@ router.post('/:id/reactivar', async (req, res) => {
 
 router.post('/:id/resenas', async (req, res) => {
   try {
-    const id = req.params.id;
     const resenaResult = await pool.query(
       `INSERT INTO profesor_resenas (profesor_id, autor, comentario) VALUES ($1,$2,$3) RETURNING *`,
-      [id, req.body.autor, req.body.comentario]
+      [req.params.id, req.body.autor, req.body.comentario]
     );
     res.status(201).json(resenaResult.rows[0]);
   } catch (err) {
