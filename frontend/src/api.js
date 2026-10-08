@@ -90,7 +90,8 @@ export const api = {
     login: (correo, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) })
   },
   portal: {
-    login: (username, password) => requestPortal('/portal/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+    login: (username, password, colegio_id) =>
+      requestPortal('/portal/login', { method: 'POST', body: JSON.stringify({ username, password, colegio_id }) }),
     me: () => requestPortal('/portal/me')
   },
   grados: {
