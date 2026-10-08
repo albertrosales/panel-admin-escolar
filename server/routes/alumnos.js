@@ -4,15 +4,28 @@ const pool = require('../db');
 const { evaluarEstadoAlumno } = require('../services/estadoPagoService');
 const { getOrCreateUser, enrolUser, setEnrolmentSuspension, STUDENT_ROLE_ID } = require('../services/moodleService');
 
+// Toda ruta con :id verifica que el alumno sea del colegio de quien pide
+router.param('id', async (req, res, next, id) => {
+  try {
+    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'ID de alumno inválido' });
+    const r = await pool.query('SELECT colegio_id FROM alumnos WHERE id = $1', [id]);
+    if (!r.rows[0] || Number(r.rows[0].colegio_id) !== req.colegioId) {
+      return res.status(404).json({ error: 'Alumno no encontrado' });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
     const estado_pago = req.query.estado_pago;
     const grado_id = req.query.grado_id;
     const incluirInactivos = req.query.incluir_inactivos === 'true';
 
     const conditions = ['a.colegio_id = $1'];
-    const params = [colegio_id];
+    const params = [req.colegioId];
     let join = '';
 
     if (!incluirInactivos) conditions.push('a.activo = true');
@@ -39,13 +52,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    if (!/^\d+$/.test(id)) {
-      return res.status(400).json({ error: 'ID de alumno inválido' });
-    }
-
     const alumnoResult = await pool.query('SELECT * FROM alumnos WHERE id = $1', [id]);
     const alumno = alumnoResult.rows[0];
-    if (!alumno) return res.status(404).json({ error: 'Alumno no encontrado' });
 
     const historialResult = await pool.query(
       'SELECT * FROM alumno_historial WHERE alumno_id = $1 ORDER BY fecha DESC', [id]
@@ -71,11 +79,12 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const b = req.body;
-    if (!b.colegio_id || !b.nombre_completo) {
-      return res.status(400).json({ error: 'colegio_id y nombre_completo son requeridos' });
+    const colegioId = req.colegioId;
+    if (!b.nombre_completo) {
+      return res.status(400).json({ error: 'nombre_completo es requerido' });
     }
 
-    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [b.colegio_id]);
+    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [colegioId]);
     const colegio = colegioResult.rows[0];
     if (!colegio) return res.status(400).json({ error: 'Colegio no encontrado' });
 
@@ -97,7 +106,7 @@ router.post('/', async (req, res) => {
     if (gradoIds.length) {
       const gradosResult = await pool.query(
         'SELECT * FROM grados WHERE id = ANY($1) AND colegio_id = $2',
-        [gradoIds, b.colegio_id]
+        [gradoIds, colegioId]
       );
       grados = gradosResult.rows;
     }
@@ -111,7 +120,7 @@ router.post('/', async (req, res) => {
         fecha_matricula, monto_mensualidad
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
       [
-        b.colegio_id, grados[0] ? grados[0].id : null, b.nombre_completo, b.nombre_encargado,
+        colegioId, grados[0] ? grados[0].id : null, b.nombre_completo, b.nombre_encargado,
         b.telefono_encargado, b.correo_encargado, b.telefono || null, b.direccion || null,
         b.fecha_nacimiento || null, b.identidad || null, b.foto_url || null,
         !!b.es_extranjero, moodleInfo ? moodleInfo.id : null,
@@ -174,7 +183,6 @@ router.patch('/:id', async (req, res) => {
       `UPDATE alumnos SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
       params
     );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Alumno no encontrado' });
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -188,11 +196,15 @@ router.post('/:id/dar-de-baja', async (req, res) => {
 
     const alumnoResult = await pool.query('SELECT * FROM alumnos WHERE id = $1', [id]);
     const alumno = alumnoResult.rows[0];
-    if (!alumno) return res.status(404).json({ error: 'Alumno no encontrado' });
 
     const result = await pool.query(
       `UPDATE alumnos SET activo = false, fecha_baja = CURRENT_DATE, motivo_baja = $1 WHERE id = $2 RETURNING *`,
       [motivo, id]
+    );
+
+    await pool.query(
+      "INSERT INTO alumno_historial (alumno_id, tipo, descripcion) VALUES ($1, 'cambio_estado', $2)",
+      [id, 'Alumno dado de baja' + (motivo ? ': ' + motivo : '')]
     );
 
     if (alumno.moodle_user_id) {
@@ -208,11 +220,6 @@ router.post('/:id/dar-de-baja', async (req, res) => {
       }
     }
 
-    await pool.query(
-      "INSERT INTO alumno_historial (alumno_id, tipo, descripcion) VALUES ($1, 'cambio_estado', $2)",
-      [id, 'Alumno dado de baja' + (motivo ? ': ' + motivo : '')]
-    );
-
     res.json({ alumno: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -226,7 +233,6 @@ router.post('/:id/reactivar', async (req, res) => {
       `UPDATE alumnos SET activo = true, fecha_baja = NULL, motivo_baja = NULL WHERE id = $1 RETURNING *`,
       [id]
     );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Alumno no encontrado' });
     res.json({ alumno: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -236,16 +242,17 @@ router.post('/:id/reactivar', async (req, res) => {
 router.post('/:id/matricular', async (req, res) => {
   try {
     const id = req.params.id;
-    if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'ID de alumno inválido' });
     const gradoIds = req.body.grados || [];
 
     const alumnoResult = await pool.query('SELECT * FROM alumnos WHERE id = $1', [id]);
     const alumno = alumnoResult.rows[0];
-    if (!alumno) return res.status(404).json({ error: 'Alumno no encontrado' });
 
     const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [alumno.colegio_id]);
     const colegio = colegioResult.rows[0];
-    const gradosResult = await pool.query('SELECT * FROM grados WHERE id = ANY($1)', [gradoIds]);
+    const gradosResult = await pool.query(
+      'SELECT * FROM grados WHERE id = ANY($1) AND colegio_id = $2',
+      [gradoIds, alumno.colegio_id]
+    );
     const grados = gradosResult.rows;
 
     const erroresMatricula = [];
