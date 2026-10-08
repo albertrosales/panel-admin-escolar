@@ -5,7 +5,6 @@ const pool = require('../db');
 // Ingresos por mes (últimos 12 meses) — solo pagos marcados como pagados
 router.get('/ingresos-por-mes', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
     const result = await pool.query(
       `SELECT to_char(date_trunc('month', p.fecha_pago), 'YYYY-MM') AS mes,
               SUM(p.monto) AS total
@@ -13,7 +12,7 @@ router.get('/ingresos-por-mes', async (req, res) => {
        JOIN alumnos a ON a.id = p.alumno_id
        WHERE a.colegio_id = $1 AND p.pagado = true AND p.fecha_pago >= NOW() - INTERVAL '12 months'
        GROUP BY 1 ORDER BY 1`,
-      [colegio_id]
+      [req.colegioId]
     );
     res.json(result.rows);
   } catch (err) {
@@ -24,14 +23,13 @@ router.get('/ingresos-por-mes', async (req, res) => {
 // Alumnos nuevos por mes (últimos 12 meses), según fecha_matricula
 router.get('/alumnos-nuevos-por-mes', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
     const result = await pool.query(
       `SELECT to_char(date_trunc('month', fecha_matricula), 'YYYY-MM') AS mes,
               COUNT(*) AS total
        FROM alumnos
        WHERE colegio_id = $1 AND fecha_matricula >= NOW() - INTERVAL '12 months'
        GROUP BY 1 ORDER BY 1`,
-      [colegio_id]
+      [req.colegioId]
     );
     res.json(result.rows);
   } catch (err) {
@@ -42,14 +40,13 @@ router.get('/alumnos-nuevos-por-mes', async (req, res) => {
 // Bajas (desertados) por mes, según fecha_baja
 router.get('/bajas-por-mes', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
     const result = await pool.query(
       `SELECT to_char(date_trunc('month', fecha_baja), 'YYYY-MM') AS mes,
               COUNT(*) AS total
        FROM alumnos
        WHERE colegio_id = $1 AND fecha_baja IS NOT NULL AND fecha_baja >= NOW() - INTERVAL '12 months'
        GROUP BY 1 ORDER BY 1`,
-      [colegio_id]
+      [req.colegioId]
     );
     res.json(result.rows);
   } catch (err) {
@@ -60,7 +57,7 @@ router.get('/bajas-por-mes', async (req, res) => {
 // Resumen general para las tarjetas del Dashboard
 router.get('/resumen', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
+    const colegio_id = req.colegioId;
 
     const alumnosResult = await pool.query(
       `SELECT
