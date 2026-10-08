@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { api, guardarSesionPortal } from '../api';
 
 export default function PortalLogin() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const colegioId = Number(params.get('colegio')) || 1;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -15,7 +17,7 @@ export default function PortalLogin() {
     setError('');
     setCargando(true);
     try {
-      const res = await api.portal.login(username, password);
+      const res = await api.portal.login(username, password, colegioId);
       guardarSesionPortal(res.token, res.usuario);
       navigate('/portal');
     } catch (err) {
