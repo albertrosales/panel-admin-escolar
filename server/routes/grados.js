@@ -5,10 +5,9 @@ const { getCategories, createCourse } = require('../services/moodleService');
 
 router.get('/', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
     const result = await pool.query(
       'SELECT * FROM grados WHERE colegio_id = $1 ORDER BY nombre',
-      [colegio_id]
+      [req.colegioId]
     );
     res.json(result.rows);
   } catch (err) {
@@ -18,8 +17,7 @@ router.get('/', async (req, res) => {
 
 router.get('/categorias-moodle', async (req, res) => {
   try {
-    const colegio_id = req.query.colegio_id;
-    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [colegio_id]);
+    const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [req.colegioId]);
     const colegio = colegioResult.rows[0];
     if (!colegio) return res.status(400).json({ error: 'Colegio no encontrado' });
 
@@ -32,18 +30,17 @@ router.get('/categorias-moodle', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const colegio_id = req.body.colegio_id;
     const nombre = req.body.nombre;
-    const categoriaModoleId = req.body.categoria_moodle_id;
+    const categoriaMoodleId = req.body.categoria_moodle_id;
 
-    if (!colegio_id || !nombre || !nombre.trim()) {
-      return res.status(400).json({ error: 'colegio_id y nombre son requeridos' });
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({ error: 'nombre es requerido' });
     }
 
     let moodleCourseId = null;
 
-    if (categoriaModoleId) {
-      const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [colegio_id]);
+    if (categoriaMoodleId) {
+      const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [req.colegioId]);
       const colegio = colegioResult.rows[0];
       if (!colegio) return res.status(400).json({ error: 'Colegio no encontrado' });
 
@@ -52,7 +49,7 @@ router.post('/', async (req, res) => {
           moodleUrl: colegio.moodle_url,
           token: colegio.moodle_token,
           fullname: nombre.trim(),
-          categoryId: categoriaModoleId
+          categoryId: categoriaMoodleId
         });
         moodleCourseId = curso.id;
       } catch (err) {
@@ -62,7 +59,7 @@ router.post('/', async (req, res) => {
 
     const result = await pool.query(
       'INSERT INTO grados (colegio_id, nombre, moodle_category_id) VALUES ($1,$2,$3) RETURNING *',
-      [colegio_id, nombre.trim(), moodleCourseId]
+      [req.colegioId, nombre.trim(), moodleCourseId]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
