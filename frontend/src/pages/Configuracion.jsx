@@ -17,10 +17,11 @@ export default function Configuracion() {
   }
 
   const [cuentas, setCuentas] = useState('');
-  useEffect(() => { api.admin.cuentas().then((r) => setCuentas(r.cuentas_destino || '')).catch(() => {}); }, []);
+  const [autoMF, setAutoMF] = useState(false);
+  useEffect(() => { api.admin.cuentas().then((r) => { setCuentas(r.cuentas_destino || ''); setAutoMF(!!r.conciliacion_monto_fecha); }).catch(() => {}); }, []);
   async function guardarCuentas(e) {
     e.preventDefault();
-    try { setMensaje((await api.admin.guardarCuentas(cuentas)).mensaje); } catch (e2) { setMensaje('Error: ' + e2.message); }
+    try { setMensaje((await api.admin.guardarCuentas(cuentas, autoMF)).mensaje); } catch (e2) { setMensaje('Error: ' + e2.message); }
   }
 
   async function guardarDia(e) {
@@ -99,6 +100,11 @@ export default function Configuracion() {
         </p>
         <form onSubmit={guardarCuentas} className="flex flex-col gap-3 max-w-md">
           <textarea rows="3" value={cuentas} onChange={(e) => setCuentas(e.target.value)} placeholder="Ej. 216350229626" />
+          <label className="!flex-row items-start gap-2 text-sm">
+            <input type="checkbox" className="w-auto mt-1" checked={autoMF} onChange={(e) => setAutoMF(e.target.checked)} />
+            <span>Estas cuentas son exclusivas del colegio: confirmar automáticamente por monto y fecha cuando no haya referencia.
+              <span className="block text-gray-500">Déjalo apagado si se usan cuentas personales: así los depósitos que solo coinciden en monto quedan como "probables" para que los apruebes tú.</span></span>
+          </label>
           <div><button type="submit">Guardar</button></div>
         </form>
       </div>

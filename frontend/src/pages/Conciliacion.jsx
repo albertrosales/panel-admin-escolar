@@ -7,18 +7,21 @@ function leer(file) {
 
 export default function Conciliacion() {
   const [res, setRes] = useState(null);
-  const [sin, setSin] = useState([]);
   const [msg, setMsg] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [cuentas, setCuentas] = useState([]);
+  const [cuenta, setCuenta] = useState('');
   const ref = useRef();
-  const cargar = () => api.conciliacion.sinAsignar().then(setSin).catch(() => {});
-  useEffect(() => { cargar(); }, []);
+
+  useEffect(() => {
+    api.admin.cuentas().then((r) => setCuentas(String(r.cuentas_destino || '').split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean))).catch(() => {});
+  }, []);
 
   async function subir(e) {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
-    setCargando(true); setMsg('Leyendo el estado de cuenta... puede tardar un minuto.'); setRes(null);
-    try { setRes(await api.conciliacion.subir(await leer(f), f.name)); setMsg(''); cargar(); }
+    setCargando(true); setMsg('Leyendo el estado de cuenta...'); setRes(null);
+    try { setRes(await api.conciliacion.subir(await leer(f), f.name, cuenta)); setMsg(''); }
     catch (err) { setMsg('Error: ' + err.message); }
     setCargando(false); ref.current.value = '';
   }
@@ -29,36 +32,26 @@ export default function Conciliacion() {
       <div className="card">
         <h3>Confirmar pagos con el estado de cuenta</h3>
         <p className="text-sm text-gray-500 mb-3">
-          Sube el estado de cuenta del banco (PDF, Excel o CSV). El sistema busca los depósitos y confirma solo los comprobantes
-          que coinciden por referencia, o por monto y fecha cuando el cruce es único. Lo que no coincida queda para tu revisión.
+          Sube el estado de cuenta (PDF, Excel o CSV) de la cuenta donde se recibieron los pagos. El sistema solo busca los depósitos
+          que correspondan a comprobantes pendientes; el resto de movimientos (por ejemplo, gastos personales) se descarta y no se guarda.
         </p>
+        {cuentas.length > 0 && (
+          <label className="mb-3 max-w-xs">¿De qué cuenta es este estado?
+            <select value={cuenta} onChange={(e) => setCuenta(e.target.value)}>
+              <option value="">No indicar</option>
+              {cuentas.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+        )}
         <input ref={ref} type="file" accept=".pdf,.csv,.xlsx,.xls,.txt" onChange={subir} disabled={cargando} className="w-auto" />
         {msg && <p className="text-sm text-gray-500 mt-2">{msg}</p>}
         {res && (
-          <div className="text-sm mt-3">
-            <p>Depósitos leídos: <b>{res.leidos}</b> ({res.nuevos} nuevos, {res.repetidos} ya importados)</p>
-            <p>Pagos confirmados automáticamente: <b>{res.confirmados.length}</b></p>
+          <div className="text-sm mt-3 flex flex-col gap-1">
+            <p>Depósitos leídos en el archivo: <b>{res.leidos}</b></p>
+            <p>Pagos confirmados automáticamente: <b>{res.confirmados}</b></p>
+            <p>Con depósito probable (revísalos en Comprobantes): <b>{res.probables}</b></p>
             <p>Comprobantes que siguen pendientes de validación: <b>{res.siguen_pendientes}</b></p>
           </div>
-        )}
-      </div>
-
-      <div className="card">
-        <h3>Depósitos del banco sin comprobante</h3>
-        {sin.length === 0 ? <p className="text-sm text-gray-500">No hay depósitos sin asignar.</p> : (
-          <table>
-            <thead><tr><th>Fecha</th><th>Referencia</th><th>Monto</th><th>Detalle</th></tr></thead>
-            <tbody>
-              {sin.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.fecha ? new Date(m.fecha).toLocaleDateString('es-HN', { timeZone: 'UTC' }) : '—'}</td>
-                  <td>{m.referencia || '—'}</td>
-                  <td>L. {Number(m.monto).toFixed(2)}</td>
-                  <td>{m.descripcion || ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         )}
       </div>
     </div>

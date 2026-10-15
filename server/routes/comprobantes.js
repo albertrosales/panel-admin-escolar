@@ -5,7 +5,7 @@ const { procesar, refrescarFlags, sincronizarAcceso, confirmarComprobante } = re
 
 const COLS = `c.id, c.alumno_id, c.pago_id, c.subido_tipo, c.subido_por, c.banco, c.monto, c.fecha_transferencia, c.hora, c.referencia,
   c.cuenta_origen, c.nombre_remitente, c.cuenta_destino, c.nombre_destinatario, c.estado_banco, c.flags, c.estado, c.alumno_origen,
-  c.nota, c.revisado_por, c.revisado_en, c.creado_en, a.nombre_completo AS alumno_nombre`;
+  c.nota, c.deposito_probable, c.revisado_por, c.revisado_en, c.creado_en, a.nombre_completo AS alumno_nombre`;
 
 router.param('id', async (req, res, next, id) => {
   try {
@@ -79,6 +79,12 @@ router.post('/:id/aprobar', async (req, res) => {
   try {
     const { rows: [c] } = await pool.query('SELECT * FROM comprobantes WHERE id=$1', [req.params.id]);
     const estado = await confirmarComprobante(c, req.body.pago_id, req.usuario.nombre);
+    const d = c.deposito_probable;
+    if (d) { // el depósito del banco ya no puede usarse para otro comprobante
+      const base = [req.colegioId, d.fecha, String(d.referencia || '').toLowerCase().replace(/[^a-z0-9]/g, '').replace(/^0+/, ''), Number(d.monto)].join('|');
+      await pool.query('INSERT INTO movimientos_banco (colegio_id, fecha, referencia, monto, comprobante_id, hash) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',
+        [req.colegioId, d.fecha, d.referencia, d.monto, c.id, require('crypto').createHash('sha1').update(base + '|1').digest('hex')]);
+    }
     res.json({ ok: true, estado });
   } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
 });

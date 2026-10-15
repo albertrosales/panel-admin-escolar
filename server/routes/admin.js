@@ -64,13 +64,15 @@ router.post('/mora', async (req, res) => {
 });
 
 router.get('/cuentas', async (req, res) => {
-  const r = await pool.query('SELECT cuentas_destino FROM colegios WHERE id = $1', [req.colegioId]);
-  res.json({ cuentas_destino: (r.rows[0] && r.rows[0].cuentas_destino) || '' });
+  const r = await pool.query('SELECT cuentas_destino, conciliacion_monto_fecha FROM colegios WHERE id = $1', [req.colegioId]);
+  const c = r.rows[0] || {};
+  res.json({ cuentas_destino: c.cuentas_destino || '', conciliacion_monto_fecha: !!c.conciliacion_monto_fecha });
 });
 
 router.post('/cuentas', async (req, res) => {
   try {
-    await pool.query('UPDATE colegios SET cuentas_destino = $1 WHERE id = $2', [String(req.body.cuentas_destino || '').slice(0, 1000), req.colegioId]);
+    await pool.query('UPDATE colegios SET cuentas_destino = $1, conciliacion_monto_fecha = $2 WHERE id = $3',
+      [String(req.body.cuentas_destino || '').slice(0, 1000), !!req.body.conciliacion_monto_fecha, req.colegioId]);
     res.json({ mensaje: 'Cuentas del colegio guardadas.' });
   } catch (err) {
     res.status(500).json({ error: err.message });

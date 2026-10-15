@@ -151,9 +151,7 @@ export const api = {
     rechazar: (id, nota) => request('/comprobantes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ nota }) })
   },
   conciliacion: {
-    subir: (archivo, nombre) => request('/conciliacion', { method: 'POST', body: JSON.stringify({ archivo, nombre }) }),
-    cruzar: () => request('/conciliacion/cruzar', { method: 'POST' }),
-    sinAsignar: () => request('/conciliacion/sin-asignar')
+    subir: (archivo, nombre, cuenta) => request('/conciliacion', { method: 'POST', body: JSON.stringify({ archivo, nombre, cuenta }) })
   },
   calendario: {
     mes: (mes) => request('/calendario?mes=' + mes),
@@ -172,7 +170,7 @@ export const api = {
   },
   admin: {
     cuentas: () => request('/admin/cuentas'),
-    guardarCuentas: (cuentas_destino) => request('/admin/cuentas', { method: 'POST', body: JSON.stringify({ cuentas_destino }) }),
+    guardarCuentas: (cuentas_destino, conciliacion_monto_fecha) => request('/admin/cuentas', { method: 'POST', body: JSON.stringify({ cuentas_destino, conciliacion_monto_fecha }) }),
     mora: () => request('/admin/mora'),
     guardarMora: (data) => request('/admin/mora', { method: 'POST', body: JSON.stringify(data) }),
     configurarDiaPago: (colegio_id, dia_pago_mensual) =>

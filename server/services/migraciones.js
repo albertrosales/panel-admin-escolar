@@ -33,6 +33,7 @@ module.exports = async function migrar() {
       creado_en TIMESTAMP DEFAULT NOW()
     );
     ALTER TABLE colegios ADD COLUMN IF NOT EXISTS cuentas_destino TEXT;
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS conciliacion_monto_fecha BOOLEAN DEFAULT FALSE;
     ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS acceso_provisional BOOLEAN DEFAULT FALSE;
     CREATE TABLE IF NOT EXISTS comprobantes (
       id SERIAL PRIMARY KEY,
@@ -75,6 +76,9 @@ module.exports = async function migrar() {
       UNIQUE (colegio_id, hash)
     );
 
+    ALTER TABLE comprobantes ADD COLUMN IF NOT EXISTS deposito_probable JSONB;
+    UPDATE movimientos_banco SET descripcion = NULL WHERE descripcion IS NOT NULL;
+    DELETE FROM movimientos_banco WHERE comprobante_id IS NULL;
     CREATE INDEX IF NOT EXISTS idx_comprobantes_colegio ON comprobantes(colegio_id, estado);
     CREATE INDEX IF NOT EXISTS idx_comprobantes_hash ON comprobantes(colegio_id, hash);
     CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(colegio_id, fecha);

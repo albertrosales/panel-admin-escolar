@@ -16,6 +16,8 @@ const FLAGS = {
   sin_nombre: ['Sin nombre del que paga', 'amarillo']
 };
 
+const pendiente0 = (c) => c.estado === 'requiere_alumno' || c.estado === 'por_verificar';
+
 function Miniatura({ id }) {
   const [src, setSrc] = useState(null);
   useEffect(() => { imagenComprobante(id).then(setSrc).catch(() => {}); }, [id]);
@@ -67,6 +69,13 @@ function Tarjeta({ c, alumnos, onCambio }) {
         </div>
         <p><b>{c.banco || 'Banco ?'}</b> · {c.monto != null ? 'L. ' + Number(c.monto).toFixed(2) : 'monto ?'} · {c.fecha_transferencia ? new Date(c.fecha_transferencia).toLocaleDateString('es-HN', { timeZone: 'UTC' }) : 'fecha ?'} {c.hora || ''}</p>
         <p className="text-gray-500">De: {c.nombre_remitente || '—'} → {c.nombre_destinatario || '—'} {c.cuenta_destino ? '(' + c.cuenta_destino + ')' : ''}</p>
+        {c.deposito_probable && pendiente0(c) && (
+          <p className="mt-1 text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1">
+            Depósito probable en el banco: L. {Number(c.deposito_probable.monto).toFixed(2)}
+            {c.deposito_probable.fecha ? ' el ' + new Date(c.deposito_probable.fecha).toLocaleDateString('es-HN', { timeZone: 'UTC' }) : ''}
+            {c.deposito_probable.descripcion ? ' · ' + c.deposito_probable.descripcion : ''}. Si lo reconoces, aprueba el pago.
+          </p>
+        )}
         <p className="text-gray-500">Subido por {c.subido_por} ({c.subido_tipo === 'alumno' ? 'alumno' : 'administración'})</p>
 
         {pendiente ? (
