@@ -85,6 +85,12 @@ async function requestPortal(path, options) {
   return res.json();
 }
 
+export async function imagenComprobante(id) {
+  const res = await fetch(BASE + '/comprobantes/' + id + '/imagen', { headers: { Authorization: 'Bearer ' + getToken() } });
+  if (!res.ok) throw new Error('Sin imagen');
+  return URL.createObjectURL(await res.blob());
+}
+
 export const api = {
   auth: {
     login: (correo, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) })
@@ -92,7 +98,9 @@ export const api = {
   portal: {
     login: (username, password, colegio_id) =>
       requestPortal('/portal/login', { method: 'POST', body: JSON.stringify({ username, password, colegio_id }) }),
-    me: () => requestPortal('/portal/me')
+    me: () => requestPortal('/portal/me'),
+    subirComprobante: (imagen) => requestPortal('/portal-comprobantes', { method: 'POST', body: JSON.stringify({ imagen }) }),
+    misComprobantes: () => requestPortal('/portal-comprobantes')
   },
   grados: {
     listar: (params) => request('/grados?' + new URLSearchParams(params)),
@@ -135,6 +143,13 @@ export const api = {
     alumnosNuevosPorMes: (colegio_id) => request('/estadisticas/alumnos-nuevos-por-mes?colegio_id=' + colegio_id),
     bajasPorMes: (colegio_id) => request('/estadisticas/bajas-por-mes?colegio_id=' + colegio_id)
   },
+  comprobantes: {
+    listar: (estado) => request('/comprobantes' + (estado ? '?estado=' + estado : '')),
+    subir: (imagen, alumno_id) => request('/comprobantes', { method: 'POST', body: JSON.stringify({ imagen, alumno_id }) }),
+    actualizar: (id, data) => request('/comprobantes/' + id, { method: 'PATCH', body: JSON.stringify(data) }),
+    aprobar: (id, pago_id) => request('/comprobantes/' + id + '/aprobar', { method: 'POST', body: JSON.stringify({ pago_id }) }),
+    rechazar: (id, nota) => request('/comprobantes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ nota }) })
+  },
   calendario: {
     mes: (mes) => request('/calendario?mes=' + mes),
     dia: (fecha) => request('/calendario/dia?fecha=' + fecha),
@@ -151,6 +166,8 @@ export const api = {
     boletin: (id) => request('/notas/boletin/' + id, { method: 'POST' })
   },
   admin: {
+    cuentas: () => request('/admin/cuentas'),
+    guardarCuentas: (cuentas_destino) => request('/admin/cuentas', { method: 'POST', body: JSON.stringify({ cuentas_destino }) }),
     mora: () => request('/admin/mora'),
     guardarMora: (data) => request('/admin/mora', { method: 'POST', body: JSON.stringify(data) }),
     configurarDiaPago: (colegio_id, dia_pago_mensual) =>

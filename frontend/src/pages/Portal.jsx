@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, cerrarSesionPortal } from '../api';
+import { comprimirImagen } from '../imagen';
 import EstadoBadge from '../components/EstadoBadge';
 
 function salir() {
@@ -49,6 +50,51 @@ export default function Portal() {
   );
 }
 
+const ESTADOS_COMP = { requiere_alumno: 'En revisión', por_verificar: 'En revisión', confirmado: 'Confirmado', rechazado: 'Rechazado' };
+
+function SubirComprobante() {
+  const [lista, setLista] = useState([]);
+  const [msg, setMsg] = useState('');
+  const [subiendo, setSubiendo] = useState(false);
+  const cargar = () => api.portal.misComprobantes().then(setLista).catch(() => {});
+  useEffect(() => { cargar(); }, []);
+
+  async function subir(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    setSubiendo(true); setMsg('Enviando comprobante...');
+    try {
+      await api.portal.subirComprobante(await comprimirImagen(f));
+      setMsg('Comprobante enviado. El colegio lo revisará y confirmará tu pago.');
+      cargar();
+    } catch (err) { setMsg('Error: ' + err.message); }
+    setSubiendo(false); e.target.value = '';
+  }
+
+  return (
+    <div className="card">
+      <h3>Enviar comprobante de pago</h3>
+      <p className="text-sm text-gray-500 mb-3">Sube la captura o foto de tu transferencia o depósito.</p>
+      <input type="file" accept="image/*" onChange={subir} disabled={subiendo} className="w-auto" />
+      {msg && <p className="text-sm text-gray-500 mt-2">{msg}</p>}
+      {lista.length > 0 && (
+        <table className="mt-4">
+          <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th></tr></thead>
+          <tbody>
+            {lista.map((c) => (
+              <tr key={c.id}>
+                <td>{new Date(c.creado_en).toLocaleDateString('es-HN')}</td>
+                <td>{c.monto != null ? 'L. ' + Number(c.monto).toFixed(2) : '—'}</td>
+                <td>{ESTADOS_COMP[c.estado] || c.estado}{c.estado === 'rechazado' && c.nota ? ' — ' + c.nota : ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 function VistaAlumno({ datos }) {
   const perfil = datos.perfil;
   return (
@@ -89,6 +135,8 @@ function VistaAlumno({ datos }) {
           </table>
         )}
       </div>
+
+      <SubirComprobante />
 
       <div className="card">
         <h3>Mis pagos</h3>

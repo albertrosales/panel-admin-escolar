@@ -16,6 +16,13 @@ export default function Configuracion() {
     try { setMensaje((await api.admin.guardarMora(mora)).mensaje); } catch (e2) { setMensaje('Error: ' + e2.message); }
   }
 
+  const [cuentas, setCuentas] = useState('');
+  useEffect(() => { api.admin.cuentas().then((r) => setCuentas(r.cuentas_destino || '')).catch(() => {}); }, []);
+  async function guardarCuentas(e) {
+    e.preventDefault();
+    try { setMensaje((await api.admin.guardarCuentas(cuentas)).mensaje); } catch (e2) { setMensaje('Error: ' + e2.message); }
+  }
+
   async function guardarDia(e) {
     e.preventDefault();
     setGuardando(true);
@@ -82,6 +89,17 @@ export default function Configuracion() {
             <input type="number" min="0" className="w-28" value={mora.mora_dias_gracia} onChange={(e) => setMora({ ...mora, mora_dias_gracia: e.target.value })} />
           </label>
           <button type="submit">Guardar</button>
+        </form>
+      </div>
+
+      <div className="card">
+        <h3>Cuentas bancarias del colegio</h3>
+        <p className="text-sm text-gray-500 mb-3">
+          Una por línea. Sirve para avisarte cuando un comprobante fue depositado a otra cuenta. Basta con los últimos dígitos.
+        </p>
+        <form onSubmit={guardarCuentas} className="flex flex-col gap-3 max-w-md">
+          <textarea rows="3" value={cuentas} onChange={(e) => setCuentas(e.target.value)} placeholder="Ej. 216350229626" />
+          <div><button type="submit">Guardar</button></div>
         </form>
       </div>
 

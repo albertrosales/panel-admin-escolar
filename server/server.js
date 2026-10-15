@@ -16,13 +16,16 @@ const estadisticasRoutes = require('./routes/estadisticas');
 const calendarioRoutes = require('./routes/calendario');
 const asistenciaRoutes = require('./routes/asistencia');
 const notasRoutes = require('./routes/notas');
+const comprobantesRoutes = require('./routes/comprobantes');
+const comprobantesPortalRoutes = require('./routes/comprobantesPortal');
+const requirePortal = require('./middleware/portalAuth');
 const migrar = require('./services/migraciones');
 const requireAuth = require('./middleware/auth');
 const revisarPagos = require('./jobs/revisarPagos');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use('/generated-pdfs', express.static('generated-pdfs'));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
@@ -54,6 +57,7 @@ async function verificarPropiedadReportes(req, res, next) {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/portal', portalRoutes);
+app.use('/api/portal-comprobantes', requirePortal, comprobantesPortalRoutes);
 
 app.use('/api/alumnos', requireAuth, alumnosRoutes);
 app.use('/api/profesores', requireAuth, profesoresRoutes);
@@ -65,6 +69,7 @@ app.use('/api/estadisticas', requireAuth, estadisticasRoutes);
 app.use('/api/calendario', requireAuth, calendarioRoutes);
 app.use('/api/asistencia', requireAuth, asistenciaRoutes);
 app.use('/api/notas', requireAuth, notasRoutes);
+app.use('/api/comprobantes', requireAuth, comprobantesRoutes);
 
 cron.schedule('0 6 * * *', () => {
   revisarPagos().catch(err => console.error('Error en cron de pagos:', err));

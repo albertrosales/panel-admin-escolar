@@ -63,6 +63,20 @@ router.post('/mora', async (req, res) => {
   }
 });
 
+router.get('/cuentas', async (req, res) => {
+  const r = await pool.query('SELECT cuentas_destino FROM colegios WHERE id = $1', [req.colegioId]);
+  res.json({ cuentas_destino: (r.rows[0] && r.rows[0].cuentas_destino) || '' });
+});
+
+router.post('/cuentas', async (req, res) => {
+  try {
+    await pool.query('UPDATE colegios SET cuentas_destino = $1 WHERE id = $2', [String(req.body.cuentas_destino || '').slice(0, 1000), req.colegioId]);
+    res.json({ mensaje: 'Cuentas del colegio guardadas.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/colegios', requireSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, nombre, moodle_url, activo, dia_pago_mensual FROM colegios ORDER BY id');

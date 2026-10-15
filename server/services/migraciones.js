@@ -32,6 +32,37 @@ module.exports = async function migrar() {
       descripcion TEXT,
       creado_en TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS cuentas_destino TEXT;
+    CREATE TABLE IF NOT EXISTS comprobantes (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      alumno_id INT REFERENCES alumnos(id) ON DELETE SET NULL,
+      pago_id INT REFERENCES pagos(id) ON DELETE SET NULL,
+      subido_tipo VARCHAR(10),
+      subido_por VARCHAR(150),
+      imagen BYTEA,
+      mime VARCHAR(30),
+      hash VARCHAR(64),
+      banco VARCHAR(60),
+      monto NUMERIC(10,2),
+      fecha_transferencia DATE,
+      hora VARCHAR(20),
+      referencia VARCHAR(60),
+      cuenta_origen VARCHAR(40),
+      nombre_remitente VARCHAR(150),
+      cuenta_destino VARCHAR(40),
+      nombre_destinatario VARCHAR(150),
+      estado_banco VARCHAR(80),
+      flags JSONB DEFAULT '[]',
+      estado VARCHAR(20) DEFAULT 'por_verificar',
+      alumno_origen VARCHAR(20),
+      nota TEXT,
+      revisado_por VARCHAR(150),
+      revisado_en TIMESTAMP,
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_comprobantes_colegio ON comprobantes(colegio_id, estado);
+    CREATE INDEX IF NOT EXISTS idx_comprobantes_hash ON comprobantes(colegio_id, hash);
     CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(colegio_id, fecha);
   `);
 };
