@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api';
 
 const COLEGIO_ID = 1;
@@ -8,6 +8,13 @@ export default function Configuracion() {
   const [guardando, setGuardando] = useState(false);
   const [generando, setGenerando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+
+  const [mora, setMora] = useState({ mora_tipo: 'porcentaje', mora_valor: 0, mora_dias_gracia: 0 });
+  useEffect(() => { api.admin.mora().then((m) => m.mora_tipo && setMora(m)).catch(() => {}); }, []);
+  async function guardarMora(e) {
+    e.preventDefault();
+    try { setMensaje((await api.admin.guardarMora(mora)).mensaje); } catch (e2) { setMensaje('Error: ' + e2.message); }
+  }
 
   async function guardarDia(e) {
     e.preventDefault();
@@ -52,6 +59,29 @@ export default function Configuracion() {
             <input type="number" min="1" max="28" value={dia} onChange={(e) => setDia(e.target.value)} className="w-28" />
           </label>
           <button type="submit" disabled={guardando}>{guardando ? 'Guardando...' : 'Guardar'}</button>
+        </form>
+      </div>
+
+      <div className="card">
+        <h3>Recargo por mora</h3>
+        <p className="text-sm text-gray-500 mb-3">
+          Se aplica una sola vez a cada cobro vencido y sin pagar, pasados los días de gracia. Valor 0 = sin recargo.
+          Los descuentos y becas se definen en la ficha de cada alumno.
+        </p>
+        <form onSubmit={guardarMora} className="flex flex-wrap items-end gap-3">
+          <label>Tipo
+            <select value={mora.mora_tipo} onChange={(e) => setMora({ ...mora, mora_tipo: e.target.value })}>
+              <option value="porcentaje">Porcentaje (%)</option>
+              <option value="fijo">Monto fijo (L.)</option>
+            </select>
+          </label>
+          <label>Valor
+            <input type="number" min="0" step="0.01" className="w-28" value={mora.mora_valor} onChange={(e) => setMora({ ...mora, mora_valor: e.target.value })} />
+          </label>
+          <label>Días de gracia
+            <input type="number" min="0" className="w-28" value={mora.mora_dias_gracia} onChange={(e) => setMora({ ...mora, mora_dias_gracia: e.target.value })} />
+          </label>
+          <button type="submit">Guardar</button>
         </form>
       </div>
 

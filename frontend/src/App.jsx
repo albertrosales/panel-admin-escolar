@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck } from 'lucide-react';
 import { haySesion, haySesionPortal, cerrarSesion, obtenerUsuario } from './api';
 import Login from './pages/Login';
 import PortalLogin from './pages/PortalLogin';
@@ -13,6 +14,8 @@ import NuevoProfesor from './pages/NuevoProfesor';
 import NuevoUsuario from './pages/NuevoUsuario';
 import Grados from './pages/Grados';
 import Configuracion from './pages/Configuracion';
+import Asistencia from './pages/Asistencia';
+import Calendario from './components/Calendario';
 
 function RutaProtegida({ children }) {
   if (!haySesion()) return <Navigate to="/login" replace />;
@@ -26,6 +29,7 @@ function RutaPortal({ children }) {
 
 export default function App() {
   const usuario = obtenerUsuario();
+  const [cal, setCal] = useState(false);
 
   function salir() {
     cerrarSesion();
@@ -58,6 +62,9 @@ export default function App() {
                     <NavLink to="/grados">
                       <BookOpen size={17} strokeWidth={2} /> <span className="hidden sm:inline">Clases</span>
                     </NavLink>
+                    <NavLink to="/asistencia">
+                      <ClipboardCheck size={17} strokeWidth={2} /> <span className="hidden sm:inline">Asistencia</span>
+                    </NavLink>
                     <NavLink to="/usuarios/nuevo">
                       <UserPlus size={17} strokeWidth={2} /> <span className="hidden sm:inline">Nuevo usuario</span>
                     </NavLink>
@@ -82,9 +89,24 @@ export default function App() {
                     <Route path="/profesores/nuevo" element={<NuevoProfesor />} />
                     <Route path="/grados" element={<Grados />} />
                     <Route path="/usuarios/nuevo" element={<NuevoUsuario />} />
+                    <Route path="/asistencia" element={<Asistencia />} />
                     <Route path="/configuracion" element={<Configuracion />} />
                   </Routes>
                 </main>
+                {!cal && (
+                  <button type="button" onClick={() => setCal(true)} aria-label="Abrir calendario"
+                    className="fixed top-4 right-4 z-30 !rounded-full !p-3 shadow-lg">
+                    <CalendarDays size={20} />
+                  </button>
+                )}
+                {cal && (
+                  <>
+                    <div className="fixed inset-0 bg-black/30 z-40 lg:hidden" onClick={() => setCal(false)} />
+                    <aside className="fixed lg:sticky z-50 lg:z-10 inset-x-3 top-3 lg:top-0 lg:inset-x-auto lg:w-80 lg:shrink-0 lg:h-screen lg:overflow-y-auto lg:p-4 max-h-[92vh] overflow-y-auto">
+                      <Calendario onClose={() => setCal(false)} />
+                    </aside>
+                  </>
+                )}
               </div>
             </RutaProtegida>
           }

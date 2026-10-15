@@ -8,7 +8,7 @@
  * Ejecutar con node-cron desde server.js, o como cron job externo:
  *   node server/jobs/revisarPagos.js
  */
-const { evaluarTodosLosAlumnos, generarCobrosMensuales } = require('../services/estadoPagoService');
+const { evaluarTodosLosAlumnos, generarCobrosMensuales, aplicarRecargos } = require('../services/estadoPagoService');
 
 async function run() {
   console.log(`[${new Date().toISOString()}] Iniciando revisión diaria de pagos...`);
@@ -17,6 +17,9 @@ async function run() {
   if (cobrosGenerados.length > 0) {
     console.log(`Se generaron ${cobrosGenerados.length} cobro(s) de mensualidad nuevos.`);
   }
+
+  const recargos = await aplicarRecargos();
+  if (recargos > 0) console.log(`Recargo por mora aplicado a ${recargos} pago(s).`);
 
   const resultados = await evaluarTodosLosAlumnos();
   const cambios = resultados.filter(r => r.cambio);

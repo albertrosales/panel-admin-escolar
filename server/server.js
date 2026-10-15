@@ -13,6 +13,10 @@ const reportesRoutes = require('./routes/reportes');
 const gradosRoutes = require('./routes/grados');
 const adminRoutes = require('./routes/admin');
 const estadisticasRoutes = require('./routes/estadisticas');
+const calendarioRoutes = require('./routes/calendario');
+const asistenciaRoutes = require('./routes/asistencia');
+const notasRoutes = require('./routes/notas');
+const migrar = require('./services/migraciones');
 const requireAuth = require('./middleware/auth');
 const revisarPagos = require('./jobs/revisarPagos');
 
@@ -58,10 +62,15 @@ app.use('/api/reportes', requireAuth, verificarPropiedadReportes, reportesRoutes
 app.use('/api/grados', requireAuth, gradosRoutes);
 app.use('/api/admin', requireAuth, adminRoutes);
 app.use('/api/estadisticas', requireAuth, estadisticasRoutes);
+app.use('/api/calendario', requireAuth, calendarioRoutes);
+app.use('/api/asistencia', requireAuth, asistenciaRoutes);
+app.use('/api/notas', requireAuth, notasRoutes);
 
 cron.schedule('0 6 * * *', () => {
   revisarPagos().catch(err => console.error('Error en cron de pagos:', err));
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Panel administrativo escuchando en puerto ${PORT}`));
+migrar()
+  .catch(err => console.error('Error en migraciones:', err.message))
+  .finally(() => app.listen(PORT, () => console.log(`Panel administrativo escuchando en puerto ${PORT}`)));

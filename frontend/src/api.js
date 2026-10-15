@@ -135,7 +135,24 @@ export const api = {
     alumnosNuevosPorMes: (colegio_id) => request('/estadisticas/alumnos-nuevos-por-mes?colegio_id=' + colegio_id),
     bajasPorMes: (colegio_id) => request('/estadisticas/bajas-por-mes?colegio_id=' + colegio_id)
   },
+  calendario: {
+    mes: (mes) => request('/calendario?mes=' + mes),
+    dia: (fecha) => request('/calendario/dia?fecha=' + fecha),
+    crear: (data) => request('/calendario', { method: 'POST', body: JSON.stringify(data) }),
+    borrar: (id) => request('/calendario/' + id, { method: 'DELETE' })
+  },
+  asistencia: {
+    lista: (grado_id, fecha) => request('/asistencia?grado_id=' + grado_id + '&fecha=' + fecha),
+    guardar: (data) => request('/asistencia', { method: 'POST', body: JSON.stringify(data) }),
+    alumno: (id) => request('/asistencia/alumno/' + id)
+  },
+  notas: {
+    alumno: (id) => request('/notas/alumno/' + id),
+    boletin: (id) => request('/notas/boletin/' + id, { method: 'POST' })
+  },
   admin: {
+    mora: () => request('/admin/mora'),
+    guardarMora: (data) => request('/admin/mora', { method: 'POST', body: JSON.stringify(data) }),
     configurarDiaPago: (colegio_id, dia_pago_mensual) =>
       request('/admin/configurar-dia-pago', { method: 'POST', body: JSON.stringify({ colegio_id, dia_pago_mensual }) }),
     generarCobrosMensuales: () => request('/admin/generar-cobros-mensuales', { method: 'POST' })

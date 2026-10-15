@@ -46,6 +46,23 @@ router.post('/migrar-cobros-mensuales', requireSuperAdmin, async (req, res) => {
   }
 });
 
+router.get('/mora', async (req, res) => {
+  const r = await pool.query('SELECT mora_tipo, mora_valor, mora_dias_gracia FROM colegios WHERE id = $1', [req.colegioId]);
+  res.json(r.rows[0] || {});
+});
+
+router.post('/mora', async (req, res) => {
+  try {
+    const tipo = req.body.mora_tipo === 'fijo' ? 'fijo' : 'porcentaje';
+    const valor = Math.max(0, Number(req.body.mora_valor) || 0);
+    const dias = Math.max(0, parseInt(req.body.mora_dias_gracia, 10) || 0);
+    await pool.query('UPDATE colegios SET mora_tipo=$1, mora_valor=$2, mora_dias_gracia=$3 WHERE id=$4', [tipo, valor, dias, req.colegioId]);
+    res.json({ mensaje: 'Recargo por mora actualizado.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/colegios', requireSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, nombre, moodle_url, activo, dia_pago_mensual FROM colegios ORDER BY id');

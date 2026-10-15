@@ -51,11 +51,13 @@ router.post('/:id/marcar-pagado', async (req, res) => {
     const { metodo_pago } = req.body;
 
     const { rows: [pago] } = await pool.query(
-      `UPDATE pagos SET pagado = TRUE, fecha_pago = CURRENT_DATE, metodo_pago = $1
-       WHERE id = $2 RETURNING *`,
+      `UPDATE pagos SET pagado = TRUE, fecha_pago = CURRENT_DATE, metodo_pago = $1,
+         monto = monto + COALESCE(recargo,0)
+       WHERE id = $2 AND pagado = FALSE RETURNING *`,
       [metodo_pago, id]
     );
 
+    if (!pago) return res.status(400).json({ error: 'El pago ya estaba registrado' });
     await pool.query(
       `INSERT INTO alumno_historial (alumno_id, tipo, descripcion, metadata)
        VALUES ($1, 'pago', $2, $3)`,

@@ -1,0 +1,37 @@
+const pool = require('../db');
+
+// Idempotente: se ejecuta al arrancar el servidor
+module.exports = async function migrar() {
+  await pool.query(`
+    ALTER TABLE alumnos
+      ADD COLUMN IF NOT EXISTS descuento_pct NUMERIC(5,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS beca_pct NUMERIC(5,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS beca_motivo VARCHAR(200);
+    ALTER TABLE colegios
+      ADD COLUMN IF NOT EXISTS mora_tipo VARCHAR(10) DEFAULT 'porcentaje',
+      ADD COLUMN IF NOT EXISTS mora_valor NUMERIC(10,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS mora_dias_gracia INT DEFAULT 0;
+    ALTER TABLE pagos
+      ADD COLUMN IF NOT EXISTS recargo NUMERIC(10,2) DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS descuento_aplicado NUMERIC(10,2) DEFAULT 0;
+    CREATE TABLE IF NOT EXISTS asistencia (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      alumno_id INT REFERENCES alumnos(id) ON DELETE CASCADE,
+      grado_id INT REFERENCES grados(id) ON DELETE CASCADE,
+      fecha DATE NOT NULL,
+      estado CHAR(1) NOT NULL,
+      UNIQUE (alumno_id, grado_id, fecha)
+    );
+    CREATE TABLE IF NOT EXISTS eventos (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      fecha DATE NOT NULL,
+      titulo VARCHAR(200) NOT NULL,
+      tipo VARCHAR(20) DEFAULT 'evento',
+      descripcion TEXT,
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(colegio_id, fecha);
+  `);
+};

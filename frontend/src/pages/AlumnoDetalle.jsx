@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, resolverUrlArchivo } from '../api';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList, CartesianGrid } from 'recharts';
 import EstadoBadge from '../components/EstadoBadge';
 import SelectorClases from '../components/SelectorClases';
 
@@ -18,6 +19,8 @@ export default function AlumnoDetalle() {
   const [guardando, setGuardando] = useState(false);
   const [motivoBaja, setMotivoBaja] = useState('');
   const [mostrarBaja, setMostrarBaja] = useState(false);
+  const [notas, setNotas] = useState(null);
+  const [asis, setAsis] = useState(null);
 
   function cargar() {
     api.alumnos.detalle(id).then((data) => {
@@ -33,10 +36,15 @@ export default function AlumnoDetalle() {
         telefono_encargado: data.telefono_encargado || '',
         correo_encargado: data.correo_encargado || '',
         fecha_matricula: data.fecha_matricula ? data.fecha_matricula.slice(0, 10) : '',
-        monto_mensualidad: data.monto_mensualidad || ''
+        monto_mensualidad: data.monto_mensualidad || '',
+        descuento_pct: data.descuento_pct || 0,
+        beca_pct: data.beca_pct || 0,
+        beca_motivo: data.beca_motivo || ''
       });
     });
     api.grados.listar({ colegio_id: COLEGIO_ID }).then(setTodosGrados);
+    api.notas.alumno(id).then(setNotas).catch(() => setNotas([]));
+    api.asistencia.alumno(id).then(setAsis).catch(() => {});
   }
   useEffect(cargar, [id]);
 
@@ -48,6 +56,17 @@ export default function AlumnoDetalle() {
       setMensaje('Documento generado.');
       window.open(resolverUrlArchivo(doc.archivo_url), '_blank');
       cargar();
+    } catch (e) {
+      setMensaje(`Error: ${e.message}`);
+    }
+  }
+
+  async function boletin() {
+    setMensaje('Generando boletín...');
+    try {
+      const doc = await api.notas.boletin(id);
+      setMensaje('Boletín generado.');
+      window.open(resolverUrlArchivo(doc.archivo_url), '_blank');
     } catch (e) {
       setMensaje(`Error: ${e.message}`);
     }
@@ -77,7 +96,9 @@ export default function AlumnoDetalle() {
     try {
       await api.alumnos.actualizar(id, {
         ...form,
-        monto_mensualidad: form.monto_mensualidad === '' ? null : Number(form.monto_mensualidad)
+        monto_mensualidad: form.monto_mensualidad === '' ? null : Number(form.monto_mensualidad),
+        descuento_pct: Number(form.descuento_pct) || 0,
+        beca_pct: Number(form.beca_pct) || 0
       });
       setEditando(false);
       cargar();
@@ -164,6 +185,7 @@ export default function AlumnoDetalle() {
             <p><span className="text-gray-500">Identidad:</span> {alumno.identidad || '—'}</p>
             <p><span className="text-gray-500">Ingreso:</span> {alumno.fecha_matricula ? new Date(alumno.fecha_matricula).toLocaleDateString('es-HN') : '—'}</p>
             <p><span className="text-gray-500">Mensualidad:</span> {alumno.monto_mensualidad ? 'L. ' + Number(alumno.monto_mensualidad).toFixed(2) : 'No configurada'}</p>
+            <p><span className="text-gray-500">Descuento / Beca:</span> {Number(alumno.descuento_pct || 0)}% / {Number(alumno.beca_pct || 0)}%{alumno.beca_motivo ? ' (' + alumno.beca_motivo + ')' : ''}</p>
             <p><span className="text-gray-500">Encargado:</span> {alumno.nombre_encargado || '—'}</p>
             <p><span className="text-gray-500">Tel. encargado:</span> {alumno.telefono_encargado || '—'}</p>
             <p><span className="text-gray-500">Correo encargado:</span> {alumno.correo_encargado || '—'}</p>
@@ -206,6 +228,20 @@ export default function AlumnoDetalle() {
               <label>
                 Monto de mensualidad (L.)
                 <input type="number" step="0.01" value={form.monto_mensualidad} onChange={(e) => setForm({ ...form, monto_mensualidad: e.target.value })} />
+              </label>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <label>
+                Descuento (%)
+                <input type="number" min="0" max="100" step="0.01" value={form.descuento_pct} onChange={(e) => setForm({ ...form, descuento_pct: e.target.value })} />
+              </label>
+              <label>
+                Beca (%)
+                <input type="number" min="0" max="100" step="0.01" value={form.beca_pct} onChange={(e) => setForm({ ...form, beca_pct: e.target.value })} />
+              </label>
+              <label>
+                Motivo de beca
+                <input value={form.beca_motivo} onChange={(e) => setForm({ ...form, beca_motivo: e.target.value })} />
               </label>
             </div>
             <label>
@@ -251,10 +287,39 @@ export default function AlumnoDetalle() {
       </div>
 
       <div className="card">
+        <div className="flex items-center justify-between">
+          <h3>Calificaciones por clase</h3>
+          {asis && asis.porcentaje != null && (
+            <span className="text-sm text-gray-500">Asistencia: <b className="text-gray-700">{asis.porcentaje}%</b> ({asis.ausentes} ausencias)</span>
+          )}
+        </div>
+        {notas === null && <p className="text-sm text-gray-500">Cargando notas...</p>}
+        {notas && notas.filter((n) => n.porcentaje != null).length === 0 && (
+          <p className="text-sm text-gray-500">Sin notas disponibles todavía (se leen de Moodle).</p>
+        )}
+        {notas && notas.some((n) => n.porcentaje != null) && (
+          <div style={{ width: '100%', height: Math.max(180, notas.length * 48) }}>
+            <ResponsiveContainer>
+              <BarChart data={notas.map((n) => ({ ...n, porcentaje: n.porcentaje || 0 }))} layout="vertical" margin={{ left: 8, right: 36 }}>
+                <CartesianGrid horizontal={false} stroke="#eef0f4" />
+                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => v + '%'} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                <YAxis type="category" dataKey="clase" width={130} tick={{ fill: '#4b5563', fontSize: 12 }} />
+                <Tooltip formatter={(v) => v + '%'} />
+                <Bar dataKey="porcentaje" fill="#2455e6" radius={[0, 6, 6, 0]} barSize={20}>
+                  <LabelList dataKey="porcentaje" position="right" formatter={(v) => v + '%'} style={{ fill: '#4b5563', fontSize: 12, fontWeight: 600 }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
         <h3>Documentos</h3>
         <div className="flex gap-2">
           <button onClick={() => generar('constancia')}>Generar constancia de estudio</button>
           <button className="secondary" onClick={() => generar('reporte_pago')}>Generar reporte de pago</button>
+          <button className="secondary" onClick={boletin}>Boletín de calificaciones</button>
         </div>
         {mensaje && <p className="text-sm text-gray-500 mt-2">{mensaje}</p>}
       </div>
@@ -263,13 +328,14 @@ export default function AlumnoDetalle() {
         <h3>Pagos</h3>
         <table>
           <thead>
-            <tr><th>Periodo</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th></th></tr>
+            <tr><th>Periodo</th><th>Monto</th><th>Recargo</th><th>Vencimiento</th><th>Estado</th><th></th></tr>
           </thead>
           <tbody>
             {alumno.pagos.map((p) => (
               <tr key={p.id}>
                 <td>{p.periodo}</td>
                 <td>L. {p.monto}</td>
+                <td>{Number(p.recargo) > 0 && !p.pagado ? 'L. ' + p.recargo : '—'}</td>
                 <td>{new Date(p.fecha_vencimiento).toLocaleDateString('es-HN')}</td>
                 <td>{p.pagado ? 'Pagado' : 'Pendiente'}</td>
                 <td>{!p.pagado && <button onClick={() => marcarPagado(p.id)}>Marcar pagado</button>}</td>

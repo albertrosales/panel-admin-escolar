@@ -167,7 +167,7 @@ router.patch('/:id', async (req, res) => {
     const id = req.params.id;
     const campos = ['nombre_completo', 'nombre_encargado', 'telefono_encargado', 'correo_encargado',
       'telefono', 'direccion', 'fecha_nacimiento', 'identidad', 'foto_url', 'es_extranjero',
-      'fecha_matricula', 'monto_mensualidad'];
+      'fecha_matricula', 'monto_mensualidad', 'descuento_pct', 'beca_pct', 'beca_motivo'];
     const sets = [];
     const params = [];
     for (const campo of campos) {

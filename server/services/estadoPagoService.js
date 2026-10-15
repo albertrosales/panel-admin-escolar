@@ -58,6 +58,25 @@ async function evaluarEstadoAlumno(alumnoId) {
   return { alumnoId, estadoAnterior: alumno.estado_pago, estadoNuevo: nuevoEstado, cambio: estadoCambio };
 }
 
+async function aplicarRecargos() {
+  const { rows } = await pool.query(
+    `SELECT p.id, p.monto, p.alumno_id, c.mora_tipo, c.mora_valor FROM pagos p
+     JOIN alumnos a ON a.id = p.alumno_id JOIN colegios c ON c.id = a.colegio_id
+     WHERE p.pagado = FALSE AND COALESCE(p.recargo,0) = 0 AND COALESCE(c.mora_valor,0) > 0
+       AND p.fecha_vencimiento + COALESCE(c.mora_dias_gracia,0) < CURRENT_DATE`
+  );
+  for (const p of rows) {
+    const r = p.mora_tipo === 'fijo' ? Number(p.mora_valor) : Math.round(Number(p.monto) * Number(p.mora_valor)) / 100;
+    if (r <= 0) continue;
+    await pool.query('UPDATE pagos SET recargo = $1 WHERE id = $2', [r, p.id]);
+    await pool.query(
+      `INSERT INTO alumno_historial (alumno_id, tipo, descripcion, metadata) VALUES ($1,'pago',$2,$3)`,
+      [p.alumno_id, `Recargo por mora aplicado: L. ${r.toFixed(2)}`, JSON.stringify({ recargo: r, pago_id: p.id })]
+    );
+  }
+  return rows.length;
+}
+
 async function evaluarTodosLosAlumnos() {
   const { rows: alumnos } = await pool.query('SELECT id FROM alumnos WHERE activo = TRUE');
   const resultados = [];
@@ -101,14 +120,18 @@ async function generarCobrosMensuales() {
       const diaVencimiento = Math.min(diaPago, ultimoDiaMes);
       const fechaVencimiento = new Date(hoy.getFullYear(), hoy.getMonth(), diaVencimiento);
 
+      const pct = Math.min(100, Number(alumno.descuento_pct || 0) + Number(alumno.beca_pct || 0));
+      const descuento = Math.round(Number(alumno.monto_mensualidad) * pct) / 100;
+      const montoNeto = Number(alumno.monto_mensualidad) - descuento;
       const { rows: [pago] } = await pool.query(
         `INSERT INTO pagos (alumno_id, periodo, monto, fecha_vencimiento) VALUES ($1,$2,$3,$4) RETURNING *`,
-        [alumno.id, periodo, alumno.monto_mensualidad, fechaVencimiento]
+        [alumno.id, periodo, montoNeto, fechaVencimiento]
       );
+      if (descuento > 0) await pool.query('UPDATE pagos SET descuento_aplicado = $1 WHERE id = $2', [descuento, pago.id]);
 
       await pool.query(
         `INSERT INTO alumno_historial (alumno_id, tipo, descripcion, metadata) VALUES ($1,'pago',$2,$3)`,
-        [alumno.id, `Cobro de mensualidad generado para ${periodo}`, JSON.stringify({ monto: alumno.monto_mensualidad, pago_id: pago.id })]
+        [alumno.id, `Cobro de mensualidad generado para ${periodo}`, JSON.stringify({ monto: montoNeto, pago_id: pago.id })]
       );
 
       generados.push(pago);
@@ -118,4 +141,4 @@ async function generarCobrosMensuales() {
   return generados;
 }
 
-module.exports = { evaluarEstadoAlumno, evaluarTodosLosAlumnos, generarCobrosMensuales };
+module.exports = { aplicarRecargos, evaluarEstadoAlumno, evaluarTodosLosAlumnos, generarCobrosMensuales };
