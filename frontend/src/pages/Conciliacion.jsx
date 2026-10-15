@@ -51,6 +51,11 @@ export default function Conciliacion() {
             <p>Pagos confirmados automáticamente: <b>{res.confirmados}</b></p>
             <p>Con depósito probable (revísalos en Comprobantes): <b>{res.probables}</b></p>
             <p>Comprobantes que siguen pendientes de validación: <b>{res.siguen_pendientes}</b></p>
+            {res.detalle && res.detalle.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-gray-600">
+                {res.detalle.map((d, i) => <li key={i}>{d}</li>)}
+              </ul>
+            )}
           </div>
         )}
       </div>

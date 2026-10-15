@@ -43,7 +43,7 @@ async function leerMovimientos(nombre, buffer) {
 async function cruzar(colegioId, movs, cuenta, quien) {
   const { rows: [col] } = await pool.query('SELECT conciliacion_monto_fecha FROM colegios WHERE id=$1', [colegioId]);
   const { rows: todos } = await pool.query(
-    `SELECT * FROM comprobantes WHERE colegio_id=$1 AND estado='por_verificar' AND alumno_id IS NOT NULL AND pago_id IS NOT NULL AND monto IS NOT NULL`, [colegioId]);
+    `SELECT * FROM comprobantes WHERE colegio_id=$1 AND estado IN ('por_verificar','requiere_alumno')`, [colegioId]);
   const cta = digitos(cuenta);
   const comps = todos.filter((c) => !cta || !digitos(c.cuenta_destino) || cta.endsWith(digitos(c.cuenta_destino)) || digitos(c.cuenta_destino).endsWith(cta));
 
@@ -58,8 +58,12 @@ async function cruzar(colegioId, movs, cuenta, quien) {
   const cerca = (a, b) => !a || !b || Math.abs(new Date(a) - new Date(b)) <= 4 * 86400000;
   const igual = (a, b) => Math.abs(Number(a) - Number(b)) < 0.01;
 
+  const rivalesDe = (c) => comps.some((o) => o.id !== c.id && o.monto != null && igual(o.monto, c.monto) && cerca(c.fecha_transferencia, o.fecha_transferencia));
   let confirmados = 0, probables = 0;
+  const detalle = [];
   for (const c of comps) {
+    const et = 'Comprobante #' + c.id + (c.monto != null ? ' (L. ' + Number(c.monto).toFixed(2) + ')' : '');
+    if (c.monto == null) { detalle.push(et + ': no se pudo leer el monto; escríbelo en la tarjeta'); continue; }
     const libres = movs.filter((m) => !usados.has(m.hash) && igual(m.monto, c.monto));
     const rc = normRef(c.referencia);
     let m = rc ? libres.find((x) => normRef(x.referencia) === rc) : null;
@@ -69,23 +73,25 @@ async function cruzar(colegioId, movs, cuenta, quien) {
       const rivales = comps.filter((o) => o.id !== c.id && igual(o.monto, c.monto) && cerca(c.fecha_transferencia, o.fecha_transferencia));
       if (cand.length === 1 && rivales.length === 0) m = cand[0];
     }
-    if (!m) continue;
-    if (porRef || col.conciliacion_monto_fecha) {
+    if (!m) { detalle.push(et + ': no encontré un depósito de ese monto' + (c.fecha_transferencia ? ' cerca del ' + new Date(c.fecha_transferencia).toLocaleDateString('es-HN', { timeZone: 'UTC' }) : '') + (rivalesDe(c) ? ' (hay otro comprobante del mismo monto y fecha, no puedo distinguirlos)' : '')); continue; }
+    const completo = !!(c.alumno_id && c.pago_id);
+    if (completo && (porRef || col.conciliacion_monto_fecha)) {
       try {
         await confirmarComprobante(c, null, quien + ' (estado de cuenta)');
         usados.add(m.hash);
         await pool.query('INSERT INTO movimientos_banco (colegio_id, fecha, referencia, monto, comprobante_id, hash) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',
           [colegioId, m.fecha, m.referencia ? String(m.referencia).slice(0, 60) : null, m.monto, c.id, m.hash]);
         confirmados++;
-      } catch (e) { /* queda para revisión manual */ }
+      } catch (e) { detalle.push(et + ': ' + e.message); }
     } else {
       await pool.query('UPDATE comprobantes SET deposito_probable = $1 WHERE id = $2',
         [JSON.stringify({ fecha: m.fecha, monto: m.monto, referencia: m.referencia || null, descripcion: String(m.descripcion || '').slice(0, 80) }), c.id]);
       probables++;
+      detalle.push(et + ': depósito encontrado' + (completo ? '; apruébalo en Comprobantes' : '; falta indicar el alumno y el cobro en Comprobantes'));
     }
   }
-  const { rows: [p] } = await pool.query(`SELECT COUNT(*)::int n FROM comprobantes WHERE colegio_id=$1 AND estado='por_verificar'`, [colegioId]);
-  return { leidos: movs.length, confirmados, probables, siguen_pendientes: p.n - 0 };
+  const { rows: [p] } = await pool.query(`SELECT COUNT(*)::int n FROM comprobantes WHERE colegio_id=$1 AND estado IN ('por_verificar','requiere_alumno')`, [colegioId]);
+  return { leidos: movs.length, confirmados, probables, siguen_pendientes: p.n, detalle };
 }
 
 router.post('/', async (req, res) => {
