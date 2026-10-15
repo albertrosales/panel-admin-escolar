@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const router = express.Router();
 const pool = require('../db');
 const { generarJSON } = require('../services/ia');
+const { leerCSV } = require('../services/estadoCuentaParser');
 const { confirmarComprobante } = require('../services/comprobanteService');
 
 const PROMPT = `Esto es un estado de cuenta bancario de Honduras. Extrae SOLO los movimientos de ENTRADA de dinero (créditos, depósitos, abonos, transferencias recibidas). Ignora débitos, retiros, comisiones y saldos.
@@ -21,6 +22,8 @@ async function leerMovimientos(nombre, buffer, mime) {
   } else {
     texto = buffer.toString('utf8');
   }
+  const directo = leerCSV(texto); // formato con encabezados reconocibles: sin IA
+  if (directo) return directo;
   const lineas = texto.split(/\r?\n/).filter((l) => l.replace(/[,;\s]/g, '').length);
   const out = [];
   for (let i = 0; i < lineas.length; i += 250) {
