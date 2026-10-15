@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { procesar, refrescarFlags } = require('../services/comprobanteService');
-const { evaluarEstadoAlumno } = require('../services/estadoPagoService');
+const { procesar, refrescarFlags, sincronizarAcceso, confirmarComprobante } = require('../services/comprobanteService');
 
 const COLS = `c.id, c.alumno_id, c.pago_id, c.subido_tipo, c.subido_por, c.banco, c.monto, c.fecha_transferencia, c.hora, c.referencia,
   c.cuenta_origen, c.nombre_remitente, c.cuenta_destino, c.nombre_destinatario, c.estado_banco, c.flags, c.estado, c.alumno_origen,
@@ -70,6 +69,7 @@ router.patch('/:id', async (req, res) => {
       params.push(req.params.id);
       await pool.query(`UPDATE comprobantes SET ${sets.join(', ')} WHERE id = $${params.length} AND estado IN ('requiere_alumno','por_verificar')`, params);
       await refrescarFlags(req.params.id);
+      if (b.alumno_id) await sincronizarAcceso(b.alumno_id);
     }
     res.json(await uno(req.params.id));
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -78,31 +78,17 @@ router.patch('/:id', async (req, res) => {
 router.post('/:id/aprobar', async (req, res) => {
   try {
     const { rows: [c] } = await pool.query('SELECT * FROM comprobantes WHERE id=$1', [req.params.id]);
-    if (!['por_verificar', 'requiere_alumno'].includes(c.estado)) return res.status(400).json({ error: 'Este comprobante ya fue procesado' });
-    if (!c.alumno_id) return res.status(400).json({ error: 'Falta indicar a qué alumno pertenece' });
-    const pagoId = req.body.pago_id || c.pago_id;
-    if (!pagoId) return res.status(400).json({ error: 'Selecciona el cobro que se está pagando' });
-
-    const { rows: [pago] } = await pool.query(
-      `UPDATE pagos SET pagado = TRUE, fecha_pago = CURRENT_DATE, metodo_pago = 'transferencia', monto = monto + COALESCE(recargo,0),
-         notas = COALESCE(notas || ' · ', '') || $3
-       WHERE id = $1 AND alumno_id = $2 AND pagado = FALSE RETURNING *`,
-      [pagoId, c.alumno_id, 'Comprobante #' + c.id + (c.referencia ? ' ref ' + c.referencia : '')]);
-    if (!pago) return res.status(400).json({ error: 'Ese cobro no existe o ya está pagado' });
-
-    await pool.query(`UPDATE comprobantes SET estado='confirmado', pago_id=$1, revisado_por=$2, revisado_en=NOW() WHERE id=$3`, [pago.id, req.usuario.nombre, c.id]);
-    await pool.query(
-      `INSERT INTO alumno_historial (alumno_id, tipo, descripcion, metadata) VALUES ($1,'pago',$2,$3)`,
-      [c.alumno_id, `Pago de ${pago.periodo} confirmado por transferencia`, JSON.stringify({ monto: pago.monto, comprobante_id: c.id, referencia: c.referencia })]);
-    const estado = await evaluarEstadoAlumno(c.alumno_id);
+    const estado = await confirmarComprobante(c, req.body.pago_id, req.usuario.nombre);
     res.json({ ok: true, estado });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
 });
 
 router.post('/:id/rechazar', async (req, res) => {
   try {
     await pool.query(`UPDATE comprobantes SET estado='rechazado', nota=$1, revisado_por=$2, revisado_en=NOW() WHERE id=$3 AND estado IN ('requiere_alumno','por_verificar')`,
       [req.body.nota || null, req.usuario.nombre, req.params.id]);
+    const r = await pool.query('SELECT alumno_id FROM comprobantes WHERE id=$1', [req.params.id]);
+    if (r.rows[0].alumno_id) await sincronizarAcceso(r.rows[0].alumno_id);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

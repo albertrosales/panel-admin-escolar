@@ -337,7 +337,7 @@ export default function AlumnoDetalle() {
                 <td>L. {p.monto}</td>
                 <td>{Number(p.recargo) > 0 && !p.pagado ? 'L. ' + p.recargo : '—'}</td>
                 <td>{new Date(p.fecha_vencimiento).toLocaleDateString('es-HN')}</td>
-                <td>{p.pagado ? 'Pagado' : 'Pendiente'}</td>
+                <td>{p.pagado ? 'Pagado' : p.en_validacion ? <span className="badge badge-amarillo">Pendiente de validación</span> : 'Pendiente'}</td>
                 <td>{!p.pagado && <button onClick={() => marcarPagado(p.id)}>Marcar pagado</button>}</td>
               </tr>
             ))}

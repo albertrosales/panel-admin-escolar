@@ -150,6 +150,11 @@ export const api = {
     aprobar: (id, pago_id) => request('/comprobantes/' + id + '/aprobar', { method: 'POST', body: JSON.stringify({ pago_id }) }),
     rechazar: (id, nota) => request('/comprobantes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ nota }) })
   },
+  conciliacion: {
+    subir: (archivo, nombre) => request('/conciliacion', { method: 'POST', body: JSON.stringify({ archivo, nombre }) }),
+    cruzar: () => request('/conciliacion/cruzar', { method: 'POST' }),
+    sinAsignar: () => request('/conciliacion/sin-asignar')
+  },
   calendario: {
     mes: (mes) => request('/calendario?mes=' + mes),
     dia: (fecha) => request('/calendario/dia?fecha=' + fecha),

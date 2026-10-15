@@ -19,6 +19,7 @@ const notasRoutes = require('./routes/notas');
 const comprobantesRoutes = require('./routes/comprobantes');
 const comprobantesPortalRoutes = require('./routes/comprobantesPortal');
 const requirePortal = require('./middleware/portalAuth');
+const conciliacionRoutes = require('./routes/conciliacion');
 const migrar = require('./services/migraciones');
 const requireAuth = require('./middleware/auth');
 const revisarPagos = require('./jobs/revisarPagos');
@@ -70,6 +71,7 @@ app.use('/api/calendario', requireAuth, calendarioRoutes);
 app.use('/api/asistencia', requireAuth, asistenciaRoutes);
 app.use('/api/notas', requireAuth, notasRoutes);
 app.use('/api/comprobantes', requireAuth, comprobantesRoutes);
+app.use('/api/conciliacion', requireAuth, conciliacionRoutes);
 
 cron.schedule('0 6 * * *', () => {
   revisarPagos().catch(err => console.error('Error en cron de pagos:', err));

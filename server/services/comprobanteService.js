@@ -1,6 +1,8 @@
-const axios = require('axios');
 const crypto = require('crypto');
 const pool = require('../db');
+const { generarJSON } = require('./ia');
+const { evaluarEstadoAlumno } = require('./estadoPagoService');
+const { setEnrolmentSuspension } = require('./moodleService');
 
 const PROMPT = `Lee este comprobante de transferencia o depósito bancario de Honduras (Banpaís, BAC, Ficohsa, Atlántida, Occidente, etc.).
 Puede ser captura de app, correo de notificación, o FOTO de un recibo en papel de agente bancario (en ese caso suele no traer nombre de quien paga; el nombre que aparece junto a la cuenta es el del beneficiario).
@@ -11,21 +13,7 @@ Responde SOLO con un JSON, sin texto extra, con estas llaves (null si no aparece
 "tipo": "transferencia" o "deposito_agente", "estado_banco": texto literal del estado (ej. "exitosa", "enviada y siendo procesada")}.
 No inventes datos: si algo no se ve claro, usa null. es_comprobante=false si la imagen no es un comprobante de transferencia o depósito.`;
 
-async function leerComprobante(buffer, mime) {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error('Falta ANTHROPIC_API_KEY en el servidor');
-  const r = await axios.post('https://api.anthropic.com/v1/messages', {
-    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5',
-    max_tokens: 700,
-    messages: [{ role: 'user', content: [
-      { type: 'image', source: { type: 'base64', media_type: mime, data: buffer.toString('base64') } },
-      { type: 'text', text: PROMPT }
-    ] }]
-  }, { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }, timeout: 60000 });
-  const texto = (r.data.content || []).map((c) => c.text || '').join('');
-  const m = texto.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('Respuesta de lectura inválida');
-  return JSON.parse(m[0]);
-}
+const leerComprobante = (buffer, mime) => generarJSON({ prompt: PROMPT, mime, buffer });
 
 const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter((t) => t.length > 1);
 // Los nombres coinciden si todas las palabras del más corto aparecen en el más largo (mínimo 2)
@@ -96,6 +84,56 @@ async function refrescarFlags(id) {
   return flags;
 }
 
+/**
+ * Acceso provisional: un alumno moroso con comprobante pendiente de validación recupera el acceso a Moodle
+ * hasta que el colegio valide. Si se rechaza (o ya no hay pendientes y sigue debiendo) se vuelve a suspender.
+ * No aplica si tuvo un comprobante rechazado en los últimos 30 días.
+ */
+async function sincronizarAcceso(alumnoId) {
+  const { rows: [a] } = await pool.query(
+    'SELECT a.estado_pago, a.moodle_user_id, a.acceso_provisional, c.moodle_url, c.moodle_token FROM alumnos a JOIN colegios c ON c.id = a.colegio_id WHERE a.id = $1', [alumnoId]);
+  if (!a || !a.moodle_user_id) return;
+  const { rows: [q] } = await pool.query(
+    `SELECT COUNT(*) FILTER (WHERE estado IN ('por_verificar','requiere_alumno'))::int pend,
+            COUNT(*) FILTER (WHERE estado = 'rechazado' AND revisado_en > NOW() - interval '30 days')::int rech
+     FROM comprobantes WHERE alumno_id = $1`, [alumnoId]);
+  const deseado = a.estado_pago === 'moroso' && q.pend > 0 && q.rech === 0;
+  const opts = { moodleUrl: a.moodle_url, token: a.moodle_token, moodleUserId: a.moodle_user_id };
+  const log = (t, d) => pool.query(`INSERT INTO alumno_historial (alumno_id, tipo, descripcion) VALUES ($1,$2,$3)`, [alumnoId, t, d]);
+  if (deseado && !a.acceso_provisional) {
+    await setEnrolmentSuspension({ ...opts, suspend: false });
+    await pool.query('UPDATE alumnos SET acceso_provisional = TRUE WHERE id = $1', [alumnoId]);
+    await log('activacion_moodle', 'Acceso habilitado provisionalmente: comprobante de pago pendiente de validación');
+  } else if (!deseado && a.acceso_provisional) {
+    if (a.estado_pago === 'moroso') {
+      await setEnrolmentSuspension({ ...opts, suspend: true });
+      await log('suspension_moodle', 'Acceso provisional retirado: el pago no fue validado');
+    }
+    await pool.query('UPDATE alumnos SET acceso_provisional = FALSE WHERE id = $1', [alumnoId]);
+  }
+}
+
+/** Marca el cobro como pagado por transferencia y confirma el comprobante */
+async function confirmarComprobante(c, pagoId, quien) {
+  if (!['por_verificar', 'requiere_alumno'].includes(c.estado)) { const e = new Error('Este comprobante ya fue procesado'); e.status = 400; throw e; }
+  if (!c.alumno_id) { const e = new Error('Falta indicar a qué alumno pertenece'); e.status = 400; throw e; }
+  pagoId = pagoId || c.pago_id;
+  if (!pagoId) { const e = new Error('Selecciona el cobro que se está pagando'); e.status = 400; throw e; }
+  const { rows: [pago] } = await pool.query(
+    `UPDATE pagos SET pagado = TRUE, fecha_pago = CURRENT_DATE, metodo_pago = 'transferencia', monto = monto + COALESCE(recargo,0),
+       notas = COALESCE(notas || ' · ', '') || $3
+     WHERE id = $1 AND alumno_id = $2 AND pagado = FALSE RETURNING *`,
+    [pagoId, c.alumno_id, 'Comprobante #' + c.id + (c.referencia ? ' ref ' + c.referencia : '')]);
+  if (!pago) { const e = new Error('Ese cobro no existe o ya está pagado'); e.status = 400; throw e; }
+  await pool.query(`UPDATE comprobantes SET estado='confirmado', pago_id=$1, revisado_por=$2, revisado_en=NOW() WHERE id=$3`, [pago.id, quien, c.id]);
+  await pool.query(
+    `INSERT INTO alumno_historial (alumno_id, tipo, descripcion, metadata) VALUES ($1,'pago',$2,$3)`,
+    [c.alumno_id, `Pago de ${pago.periodo} confirmado por transferencia`, JSON.stringify({ monto: pago.monto, comprobante_id: c.id, referencia: c.referencia })]);
+  const estado = await evaluarEstadoAlumno(c.alumno_id);
+  await sincronizarAcceso(c.alumno_id);
+  return estado;
+}
+
 /** Recibe la imagen (dataURL), la lee y la deja en la cola de revisión */
 async function procesar({ colegioId, alumnoId, dataUrl, subidoTipo, subidoPor }) {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl || '');
@@ -135,7 +173,8 @@ async function procesar({ colegioId, alumnoId, dataUrl, subidoTipo, subidoPor })
     const todas = [...new Set([...(fallo ? ['ocr_fallo'] : []), ...extra, ...flags])];
     await pool.query('UPDATE comprobantes SET flags = $1 WHERE id = $2', [JSON.stringify(todas), c.id]);
   }
+  if (alumnoId) await sincronizarAcceso(alumnoId).catch((e) => console.error('acceso provisional:', e.message));
   return c.id;
 }
 
-module.exports = { procesar, refrescarFlags };
+module.exports = { procesar, refrescarFlags, sincronizarAcceso, confirmarComprobante };

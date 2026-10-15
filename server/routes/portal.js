@@ -115,7 +115,7 @@ router.get('/me', requirePortal, async (req, res) => {
         [u.id]
       );
       const pagosResult = await pool.query(
-        'SELECT periodo, monto, fecha_vencimiento, pagado, fecha_pago FROM pagos WHERE alumno_id = $1 ORDER BY fecha_vencimiento DESC',
+        "SELECT periodo, monto, fecha_vencimiento, pagado, fecha_pago, EXISTS (SELECT 1 FROM comprobantes c WHERE c.pago_id = pagos.id AND c.estado IN ('por_verificar','requiere_alumno')) AS en_validacion FROM pagos WHERE alumno_id = $1 ORDER BY fecha_vencimiento DESC",
         [u.id]
       );
 

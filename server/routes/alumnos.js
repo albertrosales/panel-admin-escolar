@@ -59,7 +59,7 @@ router.get('/:id', async (req, res) => {
       'SELECT * FROM alumno_historial WHERE alumno_id = $1 ORDER BY fecha DESC', [id]
     );
     const pagosResult = await pool.query(
-      'SELECT * FROM pagos WHERE alumno_id = $1 ORDER BY fecha_vencimiento DESC', [id]
+      "SELECT p.*, EXISTS (SELECT 1 FROM comprobantes c WHERE c.pago_id = p.id AND c.estado IN ('por_verificar','requiere_alumno')) AS en_validacion FROM pagos p WHERE p.alumno_id = $1 ORDER BY p.fecha_vencimiento DESC", [id]
     );
     const clasesResult = await pool.query(
       'SELECT g.id, g.nombre, m.activa, m.fecha_matricula FROM matriculas m JOIN grados g ON g.id = m.grado_id WHERE m.alumno_id = $1 ORDER BY g.nombre',

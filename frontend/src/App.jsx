@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark } from 'lucide-react';
 import { haySesion, haySesionPortal, cerrarSesion, obtenerUsuario } from './api';
 import Login from './pages/Login';
 import PortalLogin from './pages/PortalLogin';
@@ -15,6 +15,7 @@ import NuevoUsuario from './pages/NuevoUsuario';
 import Grados from './pages/Grados';
 import Configuracion from './pages/Configuracion';
 import Comprobantes from './pages/Comprobantes';
+import Conciliacion from './pages/Conciliacion';
 import Asistencia from './pages/Asistencia';
 import Calendario from './components/Calendario';
 
@@ -66,6 +67,9 @@ export default function App() {
                     <NavLink to="/comprobantes">
                       <Receipt size={17} strokeWidth={2} /> <span className="hidden sm:inline">Comprobantes</span>
                     </NavLink>
+                    <NavLink to="/conciliacion">
+                      <Landmark size={17} strokeWidth={2} /> <span className="hidden sm:inline">Estado de cuenta</span>
+                    </NavLink>
                     <NavLink to="/asistencia">
                       <ClipboardCheck size={17} strokeWidth={2} /> <span className="hidden sm:inline">Asistencia</span>
                     </NavLink>
@@ -94,6 +98,7 @@ export default function App() {
                     <Route path="/grados" element={<Grados />} />
                     <Route path="/usuarios/nuevo" element={<NuevoUsuario />} />
                     <Route path="/comprobantes" element={<Comprobantes />} />
+                    <Route path="/conciliacion" element={<Conciliacion />} />
                     <Route path="/asistencia" element={<Asistencia />} />
                     <Route path="/configuracion" element={<Configuracion />} />
                   </Routes>

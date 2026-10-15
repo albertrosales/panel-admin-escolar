@@ -50,7 +50,7 @@ export default function Portal() {
   );
 }
 
-const ESTADOS_COMP = { requiere_alumno: 'En revisión', por_verificar: 'En revisión', confirmado: 'Confirmado', rechazado: 'Rechazado' };
+const ESTADOS_COMP = { requiere_alumno: 'Pendiente de validación', por_verificar: 'Pendiente de validación', confirmado: 'Confirmado', rechazado: 'Rechazado' };
 
 function SubirComprobante() {
   const [lista, setLista] = useState([]);
@@ -65,7 +65,7 @@ function SubirComprobante() {
     setSubiendo(true); setMsg('Enviando comprobante...');
     try {
       await api.portal.subirComprobante(await comprimirImagen(f));
-      setMsg('Comprobante enviado. El colegio lo revisará y confirmará tu pago.');
+      setMsg('Comprobante enviado. Está pendiente de validación; el colegio lo confirmará.');
       cargar();
     } catch (err) { setMsg('Error: ' + err.message); }
     setSubiendo(false); e.target.value = '';
@@ -151,7 +151,7 @@ function VistaAlumno({ datos }) {
                   <td>{p.periodo}</td>
                   <td>L. {p.monto}</td>
                   <td>{fecha(p.fecha_vencimiento)}</td>
-                  <td>{p.pagado ? 'Pagado' : 'Pendiente'}</td>
+                  <td>{p.pagado ? 'Pagado' : p.en_validacion ? 'Pendiente de validación' : 'Pendiente'}</td>
                 </tr>
               ))}
             </tbody>
