@@ -86,6 +86,18 @@ function Solicitudes({ periodos, periodoId, setPeriodoId, recargarPeriodos }) {
     try { await api.matriculas.rechazar(s.id, motivo.trim()); cargar(); recargarPeriodos(); } catch (e) { setMsg(e.message); }
   }
 
+  async function eliminar(s) {
+    const txt = s.estado === 'aprobada'
+      ? `¿Eliminar a ${s.nombre_completo} de la matrícula ${s.anio_escolar}? Se le quitarán las clases de ${s.grado_destino || 'su sección'} que se le activaron al aprobar (también en Moodle).`
+      : `¿Eliminar la solicitud de ${s.nombre_completo}?`;
+    if (!window.confirm(txt)) return;
+    try {
+      const r = await api.matriculas.eliminarSolicitud(s.id);
+      setMsg(r.avisos && r.avisos.length ? 'Eliminada, pero: ' + r.avisos.join(' · ') : '');
+      cargar(); recargarPeriodos();
+    } catch (e) { setMsg(e.message); }
+  }
+
   return (
     <div className="card">
       <h3>Solicitudes de matrícula</h3>
@@ -113,7 +125,8 @@ function Solicitudes({ periodos, periodoId, setPeriodoId, recargarPeriodos }) {
                 <td><span className={'badge ' + BADGE[s.estado]}>{s.estado}</span>{s.motivo_rechazo && <span className="block text-xs text-gray-500">{s.motivo_rechazo}</span>}</td>
                 <td className="whitespace-nowrap">
                   {s.estado !== 'aprobada' && <button onClick={() => aprobar(s)}>Aprobar</button>}{' '}
-                  {s.estado === 'pendiente' && <button className="secondary" onClick={() => rechazar(s)}>Rechazar</button>}
+                  {s.estado === 'pendiente' && <button className="secondary" onClick={() => rechazar(s)}>Rechazar</button>}{' '}
+                  <button className="secondary" onClick={() => eliminar(s)}>Eliminar</button>
                 </td>
               </tr>
             ))}

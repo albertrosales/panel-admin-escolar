@@ -193,6 +193,7 @@ module.exports = async function migrar() {
   const { rows: [c] } = await pool.query(`SELECT 1 FROM information_schema.columns WHERE table_name='grados' AND column_name='seccion'`);
   await pool.query(`ALTER TABLE grados ADD COLUMN IF NOT EXISTS seccion VARCHAR(80)`);
   await pool.query(`ALTER TABLE solicitudes_matricula ADD COLUMN IF NOT EXISTS seccion VARCHAR(80)`);
+  await pool.query(`ALTER TABLE solicitudes_matricula ADD COLUMN IF NOT EXISTS clases_agregadas INT[]`);
   if (!c) {
     await pool.query(`
       UPDATE grados g SET seccion = x.m[1] || '.º Grado ' || UPPER(x.m[2])

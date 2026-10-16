@@ -118,6 +118,15 @@ async function enrolUser(opts) {
   });
 }
 
+async function unenrolUser(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  return call('enrol_manual_unenrol_users', {
+    'enrolments[0][roleid]': opts.roleId,
+    'enrolments[0][userid]': opts.userId,
+    'enrolments[0][courseid]': opts.courseId
+  });
+}
+
 /**
  * Lista las categorías de cursos de Moodle (ej: 7° GRADO, 8° GRADO, 9° GRADO).
  */
@@ -152,6 +161,7 @@ module.exports = {
   createUser: createUser,
   getOrCreateUser: getOrCreateUser,
   enrolUser: enrolUser,
+  unenrolUser: unenrolUser,
   getCategories: getCategories,
   createCourse: createCourse,
   STUDENT_ROLE_ID: STUDENT_ROLE_ID,

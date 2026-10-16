@@ -161,6 +161,7 @@ export const api = {
     editarPeriodo: (id, d) => request('/matriculas/periodos/' + id, { method: 'PUT', body: JSON.stringify(d) }),
     eliminarPeriodo: (id) => request('/matriculas/periodos/' + id, { method: 'DELETE' }),
     solicitudes: (q) => request('/matriculas/solicitudes?' + new URLSearchParams(q || {})),
+    eliminarSolicitud: (id) => request('/matriculas/solicitudes/' + id, { method: 'DELETE' }),
     aprobar: (id) => request('/matriculas/solicitudes/' + id + '/aprobar', { method: 'POST' }),
     rechazar: (id, motivo) => request('/matriculas/solicitudes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ motivo }) })
   },
