@@ -108,6 +108,7 @@ export const api = {
   grados: {
     listar: (params) => request('/grados?' + new URLSearchParams(params)),
     crear: (data) => request('/grados', { method: 'POST', body: JSON.stringify(data) }),
+    asignarSeccion: (id, seccion) => request('/grados/' + id, { method: 'PATCH', body: JSON.stringify({ seccion }) }),
     listarCategoriasMoodle: (params) => request('/grados/categorias-moodle?' + new URLSearchParams(params))
   },
   alumnos: {

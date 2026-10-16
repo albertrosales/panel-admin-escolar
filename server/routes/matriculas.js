@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const notif = require('../services/correo/notificaciones');
+const { enrolUser, STUDENT_ROLE_ID } = require('../services/moodleService');
 
 const HOY = "(NOW() AT TIME ZONE 'America/Tegucigalpa')::date";
 const fechaOk = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
@@ -66,9 +67,9 @@ router.get('/solicitudes', async (req, res) => {
     if (req.query.periodo_id) { q.push(req.query.periodo_id); w += ` AND s.periodo_id = $${q.length}`; }
     if (req.query.estado) { q.push(req.query.estado); w += ` AND s.estado = $${q.length}`; }
     const { rows } = await pool.query(
-      `SELECT s.*, a.nombre_completo, a.codigo, ga.nombre AS grado_actual, g.nombre AS grado_destino, p.anio_escolar
+      `SELECT s.*, a.nombre_completo, a.codigo, ga.nombre AS grado_actual, s.seccion AS grado_destino, p.anio_escolar
        FROM solicitudes_matricula s JOIN alumnos a ON a.id = s.alumno_id JOIN periodos_matricula p ON p.id = s.periodo_id
-       LEFT JOIN grados g ON g.id = s.grado_id LEFT JOIN grados ga ON ga.id = a.grado_id
+       LEFT JOIN grados ga ON ga.id = a.grado_id
        WHERE s.colegio_id = $1 ${w} ORDER BY (s.estado='pendiente') DESC, s.creado_en DESC LIMIT 500`, q);
     res.json(rows);
   } catch (e) { err(res, e); }
@@ -80,9 +81,9 @@ router.post('/solicitudes/:id/aprobar', async (req, res) => {
       `UPDATE solicitudes_matricula SET estado='aprobada', motivo_rechazo=NULL, revisado_por=$3, revisado_en=NOW()
        WHERE id=$1 AND colegio_id=$2 AND estado <> 'aprobada' RETURNING *`, [req.params.id, req.colegioId, req.usuario.nombre || req.usuario.correo || 'admin']);
     if (!s) return res.status(404).json({ error: 'Solicitud no encontrada o ya aprobada' });
-    await aplicarSolicitud(s);
+    const avisos = await aplicarSolicitud(s);
     notif.matricula(s.id, 'aprobada');
-    res.json(s);
+    res.json({ ...s, avisos });
   } catch (e) { err(res, e); }
 });
 
@@ -99,16 +100,36 @@ router.post('/solicitudes/:id/rechazar', async (req, res) => {
   } catch (e) { err(res, e); }
 });
 
-/** Al aprobar: actualiza los datos de contacto de la familia y deja constancia en el historial */
+/** Al aprobar: actualiza contacto de la familia, matricula al alumno en TODAS las clases de la sección elegida
+ *  (panel + Moodle) y deja constancia en el historial. Devuelve avisos si algo no pudo hacerse en Moodle. */
 async function aplicarSolicitud(s) {
   await pool.query(
     `UPDATE alumnos SET nombre_encargado = COALESCE(NULLIF($2,''), nombre_encargado), telefono_encargado = COALESCE(NULLIF($3,''), telefono_encargado),
        correo_encargado = COALESCE(NULLIF($4,''), correo_encargado), telefono = COALESCE(NULLIF($5,''), telefono), direccion = COALESCE(NULLIF($6,''), direccion)
      WHERE id = $1`, [s.alumno_id, s.nombre_encargado, s.telefono_encargado, s.correo_encargado, s.telefono, s.direccion]);
-  const { rows: [i] } = await pool.query(
-    `SELECT p.anio_escolar, g.nombre AS grado FROM periodos_matricula p LEFT JOIN grados g ON g.id = $2 WHERE p.id = $1`, [s.periodo_id, s.grado_id]);
+  const avisos = [];
+  const { rows: [i] } = await pool.query('SELECT anio_escolar FROM periodos_matricula WHERE id = $1', [s.periodo_id]);
+  let n = 0;
+  if (s.seccion) {
+    const [{ rows: clases }, { rows: [al] }, { rows: [col] }] = await Promise.all([
+      pool.query('SELECT id, nombre, moodle_category_id FROM grados WHERE colegio_id = $1 AND seccion = $2 ORDER BY nombre', [s.colegio_id, s.seccion]),
+      pool.query('SELECT moodle_user_id FROM alumnos WHERE id = $1', [s.alumno_id]),
+      pool.query('SELECT moodle_url, moodle_token FROM colegios WHERE id = $1', [s.colegio_id])
+    ]);
+    if (!clases.length) avisos.push('La sección ' + s.seccion + ' ya no tiene clases.');
+    for (const c of clases) {
+      await pool.query('INSERT INTO matriculas (alumno_id, grado_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [s.alumno_id, c.id]);
+      n++;
+      if (!c.moodle_category_id) continue;
+      if (!al || !al.moodle_user_id) { avisos.push('El alumno no tiene usuario en Moodle: no se activó ' + c.nombre); continue; }
+      try {
+        await enrolUser({ moodleUrl: col.moodle_url, token: col.moodle_token, userId: al.moodle_user_id, courseId: c.moodle_category_id, roleId: STUDENT_ROLE_ID });
+      } catch (err) { avisos.push('Moodle no activó ' + c.nombre + ': ' + err.message); }
+    }
+  }
   await pool.query("INSERT INTO alumno_historial (alumno_id, tipo, descripcion) VALUES ($1,'matricula',$2)",
-    [s.alumno_id, `Matrícula ${i.anio_escolar} aprobada${i.grado ? ' · ' + i.grado : ''}`]);
+    [s.alumno_id, `Matrícula ${i.anio_escolar} aprobada${s.seccion ? ' · ' + s.seccion + ' (' + n + ' clases)' : ''}`]);
+  return avisos;
 }
 
 module.exports = router;

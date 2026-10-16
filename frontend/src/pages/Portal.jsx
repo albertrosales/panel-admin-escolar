@@ -132,7 +132,7 @@ function MatriculaAlumno({ onCambio }) {
   const [ok, setOk] = useState('');
   const cargar = () => api.portal.matricula().then((r) => {
     setD(r);
-    if (r.datos) setF({ grado_id: '', nombre_encargado: r.datos.nombre_encargado || '', telefono_encargado: r.datos.telefono_encargado || '', correo_encargado: r.datos.correo_encargado || '',
+    if (r.datos) setF({ seccion: '', nombre_encargado: r.datos.nombre_encargado || '', telefono_encargado: r.datos.telefono_encargado || '', correo_encargado: r.datos.correo_encargado || '',
       telefono: r.datos.telefono || '', direccion: r.datos.direccion || '', observaciones: '', acepta: false });
   }).catch((e) => setMsg(e.message));
   useEffect(() => { cargar(); }, []);
@@ -170,10 +170,10 @@ function MatriculaAlumno({ onCambio }) {
         ? <p className="text-sm text-red-600">{d.bloqueado}</p>
         : f && (
           <form onSubmit={enviar} className="flex flex-col gap-3">
-            <label>Grado al que se matricula
-              <select value={f.grado_id} onChange={set('grado_id')} required>
+            <label>Grado y sección al que se matricula
+              <select value={f.seccion} onChange={set('seccion')} required>
                 <option value="">Selecciona...</option>
-                {d.grados.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
+                {d.secciones.map((x) => <option key={x.seccion} value={x.seccion}>{x.seccion} ({x.clases} clases)</option>)}
               </select>
             </label>
             <p className="text-xs text-gray-500 -mb-1">Confirma los datos del padre, madre o encargado. A este correo llegan los avisos del colegio.</p>

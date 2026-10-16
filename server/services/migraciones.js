@@ -189,4 +189,14 @@ module.exports = async function migrar() {
     );
     CREATE INDEX IF NOT EXISTS idx_solic_matricula_periodo ON solicitudes_matricula(periodo_id, estado);
   `);
+  // Sección (grado + letra) a la que pertenece cada clase. Se rellena una sola vez a partir del nombre ("... 7.º Grado "A"")
+  const { rows: [c] } = await pool.query(`SELECT 1 FROM information_schema.columns WHERE table_name='grados' AND column_name='seccion'`);
+  await pool.query(`ALTER TABLE grados ADD COLUMN IF NOT EXISTS seccion VARCHAR(80)`);
+  await pool.query(`ALTER TABLE solicitudes_matricula ADD COLUMN IF NOT EXISTS seccion VARCHAR(80)`);
+  if (!c) {
+    await pool.query(`
+      UPDATE grados g SET seccion = x.m[1] || '.º Grado ' || UPPER(x.m[2])
+      FROM (SELECT id, regexp_match(nombre, '(\\d+)\\S*\\s+[Gg]rado\\s+"?([A-Za-z])"?\\s*$') AS m FROM grados) x
+      WHERE x.id = g.id AND x.m IS NOT NULL`);
+  }
 };

@@ -111,8 +111,8 @@ const comprobanteRechazado = (id) => seguro((async () => {
 /** Matrícula: evento = recibida | aprobada | rechazada */
 const matricula = (solicitudId, evento) => seguro((async () => {
   const { rows: [m] } = await pool.query(
-    `SELECT s.alumno_id, s.motivo_rechazo, p.anio_escolar, g.nombre AS grado FROM solicitudes_matricula s
-     JOIN periodos_matricula p ON p.id = s.periodo_id LEFT JOIN grados g ON g.id = s.grado_id WHERE s.id = $1`, [solicitudId]);
+    `SELECT s.alumno_id, s.motivo_rechazo, p.anio_escolar, s.seccion AS grado FROM solicitudes_matricula s
+     JOIN periodos_matricula p ON p.id = s.periodo_id WHERE s.id = $1`, [solicitudId]);
   if (!m) return;
   await auto('matricula_' + evento, m.alumno_id, 'matricula:' + solicitudId + ':' + evento,
     { extras: { periodo_academico: String(m.anio_escolar), grado: m.grado, motivo_rechazo: m.motivo_rechazo } });

@@ -77,7 +77,7 @@ function Solicitudes({ periodos, periodoId, setPeriodoId, recargarPeriodos }) {
   useEffect(() => { cargar(); }, [periodoId, estado]);
 
   async function aprobar(s) {
-    try { await api.matriculas.aprobar(s.id); cargar(); recargarPeriodos(); } catch (e) { setMsg(e.message); }
+    try { const r = await api.matriculas.aprobar(s.id); setMsg(r.avisos && r.avisos.length ? 'Aprobada, pero: ' + r.avisos.join(' · ') : ''); cargar(); recargarPeriodos(); } catch (e) { setMsg(e.message); }
   }
   async function rechazar(s) {
     const motivo = window.prompt('Motivo del rechazo (se enviará al encargado por correo)');
@@ -101,13 +101,13 @@ function Solicitudes({ periodos, periodoId, setPeriodoId, recargarPeriodos }) {
       {msg && <p className="text-sm text-red-600 mb-2">{msg}</p>}
       <div className="overflow-x-auto">
         <table>
-          <thead><tr><th>Alumno</th><th>Año</th><th>Grado actual → siguiente</th><th>Encargado</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Alumno</th><th>Año</th><th>Sección elegida</th><th>Encargado</th><th>Estado</th><th></th></tr></thead>
           <tbody>
             {lista.map((s) => (
               <tr key={s.id}>
                 <td>{s.nombre_completo}<span className="block text-xs text-gray-400">{s.codigo}</span></td>
                 <td>{s.anio_escolar}</td>
-                <td>{s.grado_actual || '—'} → <b>{s.grado_destino || '—'}</b></td>
+                <td><b>{s.grado_destino || '—'}</b></td>
                 <td className="text-sm">{s.nombre_encargado}<span className="block text-xs text-gray-500">{s.telefono_encargado} · {s.correo_encargado}</span>
                   {s.observaciones && <span className="block text-xs text-gray-500">“{s.observaciones}”</span>}</td>
                 <td><span className={'badge ' + BADGE[s.estado]}>{s.estado}</span>{s.motivo_rechazo && <span className="block text-xs text-gray-500">{s.motivo_rechazo}</span>}</td>
@@ -121,7 +121,7 @@ function Solicitudes({ periodos, periodoId, setPeriodoId, recargarPeriodos }) {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-gray-500 mt-3">Al aprobar, se actualizan los datos de contacto de la familia y se envía el correo de confirmación. El grado elegido queda registrado para el nuevo año; las clases se asignan al iniciar el año escolar.</p>
+      <p className="text-xs text-gray-500 mt-3">Al aprobar se actualizan los datos de contacto, se envía el correo de confirmación y el alumno queda matriculado en todas las clases de la sección elegida, también en Moodle.</p>
     </div>
   );
 }

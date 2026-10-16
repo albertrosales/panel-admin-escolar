@@ -8,6 +8,7 @@ export default function Grados() {
   const [categorias, setCategorias] = useState([]);
   const [nombre, setNombre] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
+  const [seccion, setSeccion] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
 
@@ -15,6 +16,7 @@ export default function Grados() {
     api.grados.listar({ colegio_id: COLEGIO_ID }).then(setGrados);
   }
   useEffect(cargar, []);
+  const secciones = [...new Set(grados.map((g) => g.seccion).filter(Boolean))].sort();
 
   useEffect(() => {
     api.grados.listarCategoriasMoodle({ colegio_id: COLEGIO_ID })
@@ -34,9 +36,11 @@ export default function Grados() {
       await api.grados.crear({
         colegio_id: COLEGIO_ID,
         nombre,
-        categoria_moodle_id: categoriaId || undefined
+        categoria_moodle_id: categoriaId || undefined,
+        seccion
       });
       setNombre('');
+      setSeccion('');
       setCategoriaId('');
       cargar();
     } catch (e2) {
@@ -73,24 +77,37 @@ export default function Grados() {
               ))}
             </select>
           </label>
+          <label>
+            Grado y sección (ej: 7.º Grado A)
+            <input list="secciones" placeholder="Las clases con la misma sección se matriculan juntas" value={seccion} onChange={(e) => setSeccion(e.target.value)} />
+          </label>
           <button type="submit" disabled={cargando}>{cargando ? 'Creando...' : 'Crear clase'}</button>
         </div>
         {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
 
+      <datalist id="secciones">{secciones.map((x) => <option key={x} value={x} />)}</datalist>
       <div className="card">
         <h3>Clases existentes</h3>
+        <p className="text-sm text-gray-500 mb-3">
+          Cuando un alumno se matricula en una sección (por ejemplo 8.º Grado A), se le activan todas las clases que tengan esa sección.
+          Revisa que cada clase tenga la suya.
+        </p>
         <table>
-          <thead><tr><th>Nombre</th><th>Origen</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Grado y sección</th><th>Origen</th></tr></thead>
           <tbody>
             {grados.map((g) => (
               <tr key={g.id}>
                 <td>{g.nombre}</td>
+                <td>
+                  <input list="secciones" defaultValue={g.seccion || ''} placeholder="Sin sección" className="w-48"
+                    onBlur={(e) => { if (e.target.value !== (g.seccion || '')) api.grados.asignarSeccion(g.id, e.target.value).then(cargar); }} />
+                </td>
                 <td>{g.moodle_category_id ? 'Sincronizada con Moodle' : 'Creada en el panel'}</td>
               </tr>
             ))}
             {grados.length === 0 && (
-              <tr><td colSpan={2} className="text-gray-500">Sin clases todavía</td></tr>
+              <tr><td colSpan={3} className="text-gray-500">Sin clases todavía</td></tr>
             )}
           </tbody>
         </table>
