@@ -5,7 +5,7 @@ const { procesar, refrescarFlags, sincronizarAcceso, confirmarComprobante } = re
 
 const COLS = `c.id, c.alumno_id, c.pago_id, c.subido_tipo, c.subido_por, c.banco, c.monto, c.fecha_transferencia, c.hora, c.referencia,
   c.cuenta_origen, c.nombre_remitente, c.cuenta_destino, c.nombre_destinatario, c.estado_banco, c.flags, c.estado, c.alumno_origen,
-  c.nota, c.deposito_probable, c.revisado_por, c.revisado_en, c.creado_en, a.nombre_completo AS alumno_nombre`;
+  c.nota, c.texto_notas, c.deposito_probable, c.revisado_por, c.revisado_en, c.creado_en, a.nombre_completo AS alumno_nombre`;
 
 router.param('id', async (req, res, next, id) => {
   try {

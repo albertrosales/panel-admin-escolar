@@ -8,6 +8,7 @@ const COLEGIO_ID = 1;
 export default function Alumnos() {
   const [alumnos, setAlumnos] = useState([]);
   const [filtro, setFiltro] = useState('');
+  const [q, setQ] = useState('');
 
   function cargar() {
     api.alumnos.listar({ colegio_id: COLEGIO_ID, ...(filtro ? { estado_pago: filtro } : {}) })
@@ -24,6 +25,7 @@ export default function Alumnos() {
       </div>
       <div className="card">
         <div style={{ marginBottom: 12 }}>
+          <input className="mr-3 w-64" placeholder="Buscar por nombre o código..." value={q} onChange={(e) => setQ(e.target.value)} />
           <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
             <option value="">Todos los estados</option>
             <option value="al_dia">Al día</option>
@@ -34,6 +36,7 @@ export default function Alumnos() {
         <table>
           <thead>
             <tr>
+              <th>Código</th>
               <th>Nombre</th>
               <th>Estado</th>
               <th>Encargado</th>
@@ -41,8 +44,9 @@ export default function Alumnos() {
             </tr>
           </thead>
           <tbody>
-            {alumnos.map((a) => (
+            {alumnos.filter((a) => !q || (a.nombre_completo + ' ' + a.codigo).toLowerCase().includes(q.toLowerCase())).map((a) => (
               <tr key={a.id}>
+                <td className="text-gray-500">{a.codigo}</td>
                 <td>{a.nombre_completo}</td>
                 <td><EstadoBadge estado={a.estado_pago} /></td>
                 <td>{a.nombre_encargado || '—'}</td>
@@ -50,7 +54,7 @@ export default function Alumnos() {
               </tr>
             ))}
             {alumnos.length === 0 && (
-              <tr><td colSpan={4} style={{ color: 'var(--text-dim)' }}>Sin resultados</td></tr>
+              <tr><td colSpan={5} style={{ color: 'var(--text-dim)' }}>Sin resultados</td></tr>
             )}
           </tbody>
         </table>

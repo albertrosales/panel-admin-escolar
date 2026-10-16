@@ -63,6 +63,29 @@ router.post('/mora', async (req, res) => {
   }
 });
 
+// Envía a Moodle el código de cada alumno (campo "Número de ID")
+router.post('/sincronizar-codigos-moodle', async (req, res) => {
+  try {
+    const { setIdNumber } = require('../services/moodleService');
+    const { rows: [col] } = await pool.query('SELECT moodle_url, moodle_token FROM colegios WHERE id = $1', [req.colegioId]);
+    const { rows } = await pool.query('SELECT id, codigo, moodle_user_id FROM alumnos WHERE colegio_id = $1 AND moodle_user_id IS NOT NULL ORDER BY id', [req.colegioId]);
+    const vistos = new Set();
+    let actualizados = 0, compartidos = 0;
+    const errores = [];
+    for (const a of rows) {
+      if (vistos.has(a.moodle_user_id)) { compartidos++; continue; } // cuenta de Moodle compartida (mismo correo)
+      vistos.add(a.moodle_user_id);
+      try {
+        await setIdNumber({ moodleUrl: col.moodle_url, token: col.moodle_token, userId: a.moodle_user_id, idnumber: a.codigo });
+        actualizados++;
+      } catch (e) { errores.push(a.codigo + ': ' + e.message); }
+    }
+    res.json({ actualizados, compartidos, errores: errores.slice(0, 5), total_errores: errores.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/cuentas', async (req, res) => {
   const r = await pool.query('SELECT cuentas_destino, conciliacion_monto_fecha FROM colegios WHERE id = $1', [req.colegioId]);
   const c = r.rows[0] || {};

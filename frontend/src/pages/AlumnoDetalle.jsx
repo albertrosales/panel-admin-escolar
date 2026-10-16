@@ -144,7 +144,7 @@ export default function AlumnoDetalle() {
     <div>
       <div className="flex items-center justify-between mb-1">
         <h2 className="!mb-0">
-          {alumno.nombre_completo} <EstadoBadge estado={alumno.estado_pago} />
+          {alumno.nombre_completo} <span className="badge ml-1" style={{ background: '#eef2ff', color: '#2455e6' }}>{alumno.codigo}</span> <EstadoBadge estado={alumno.estado_pago} />
           {!alumno.activo && <span className="badge badge-rojo ml-2">Baja</span>}
           {alumno.es_extranjero && <span className="badge badge-amarillo ml-2">Extranjero</span>}
         </h2>

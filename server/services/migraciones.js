@@ -81,6 +81,38 @@ module.exports = async function migrar() {
     DELETE FROM movimientos_banco WHERE comprobante_id IS NULL;
     CREATE INDEX IF NOT EXISTS idx_comprobantes_colegio ON comprobantes(colegio_id, estado);
     CREATE INDEX IF NOT EXISTS idx_comprobantes_hash ON comprobantes(colegio_id, hash);
+    ALTER TABLE comprobantes ADD COLUMN IF NOT EXISTS texto_notas VARCHAR(300);
     CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(colegio_id, fecha);
   `);
+
+  // ---- Código de alumno: AAAA + número correlativo por colegio (202601, 202602...)
+  await pool.query(`ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS codigo VARCHAR(12)`);
+  await pool.query(`
+    WITH base AS (
+      SELECT colegio_id, LEFT(codigo,4) AS y, MAX(SUBSTRING(codigo FROM 5)::int) AS m FROM alumnos WHERE codigo IS NOT NULL GROUP BY 1,2
+    ), n AS (
+      SELECT a.id, a.colegio_id, EXTRACT(YEAR FROM COALESCE(a.creado_en, NOW()))::int AS y,
+             ROW_NUMBER() OVER (PARTITION BY a.colegio_id, EXTRACT(YEAR FROM COALESCE(a.creado_en, NOW())) ORDER BY a.id) AS rn
+      FROM alumnos a WHERE a.codigo IS NULL
+    )
+    UPDATE alumnos a SET codigo = n.y::text || LPAD((n.rn + COALESCE(b.m,0))::text, 2, '0')
+    FROM n LEFT JOIN base b ON b.colegio_id = n.colegio_id AND b.y = n.y::text WHERE a.id = n.id
+  `);
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION asignar_codigo_alumno() RETURNS trigger AS $f$
+    DECLARE y text; m int;
+    BEGIN
+      IF NEW.codigo IS NULL OR NEW.codigo = '' THEN
+        PERFORM pg_advisory_xact_lock(NEW.colegio_id);
+        y := to_char(NOW(), 'YYYY');
+        SELECT COALESCE(MAX(SUBSTRING(codigo FROM 5)::int), 0) INTO m FROM alumnos WHERE colegio_id = NEW.colegio_id AND codigo LIKE y || '%';
+        NEW.codigo := y || LPAD((m + 1)::text, 2, '0');
+      END IF;
+      RETURN NEW;
+    END $f$ LANGUAGE plpgsql
+  `);
+  await pool.query(`DROP TRIGGER IF EXISTS trg_codigo_alumno ON alumnos`);
+  await pool.query(`CREATE TRIGGER trg_codigo_alumno BEFORE INSERT ON alumnos FOR EACH ROW EXECUTE FUNCTION asignar_codigo_alumno()`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_alumnos_codigo ON alumnos(colegio_id, codigo)`);
+  await pool.query(`ALTER TABLE alumnos ALTER COLUMN codigo SET NOT NULL`);
 };

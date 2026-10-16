@@ -64,6 +64,8 @@ export default function NuevoAlumno() {
         <h2>Alumno creado</h2>
         <div className="card">
           <p><strong>{resultado.alumno.nombre_completo}</strong> fue registrado correctamente.</p>
+          <p>Código de alumno: <strong>{resultado.alumno.codigo}</strong></p>
+          {resultado.avisoCodigo && <p className="text-amber-700">{resultado.avisoCodigo}</p>}
           <p>Clases matriculadas: {resultado.clasesMatriculadas.join(', ') || 'ninguna'}</p>
 
           {resultado.moodle && resultado.moodle.creado && (

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { evaluarEstadoAlumno } = require('../services/estadoPagoService');
-const { getOrCreateUser, enrolUser, setEnrolmentSuspension, STUDENT_ROLE_ID } = require('../services/moodleService');
+const { getOrCreateUser, setIdNumber, enrolUser, setEnrolmentSuspension, STUDENT_ROLE_ID } = require('../services/moodleService');
 
 // Toda ruta con :id verifica que el alumno sea del colegio de quien pide
 router.param('id', async (req, res, next, id) => {
@@ -13,6 +13,17 @@ router.param('id', async (req, res, next, id) => {
       return res.status(404).json({ error: 'Alumno no encontrado' });
     }
     next();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Buscar alumno por su código (para confirmar identidad al subir comprobantes)
+router.get('/por-codigo/:codigo', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT id, nombre_completo, codigo FROM alumnos WHERE colegio_id = $1 AND codigo = $2', [req.colegioId, String(req.params.codigo).trim()]);
+    if (!r.rows[0]) return res.status(404).json({ error: 'No existe un alumno con ese código' });
+    res.json(r.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -129,6 +140,16 @@ router.post('/', async (req, res) => {
     );
     const alumno = alumnoResult.rows[0];
 
+    // El código de alumno también queda en Moodle (campo "Número de ID")
+    let avisoCodigo = null;
+    if (moodleInfo && moodleInfo.id && (moodleInfo.creado || !moodleInfo.idnumber)) {
+      try {
+        await setIdNumber({ moodleUrl: colegio.moodle_url, token: colegio.moodle_token, userId: moodleInfo.id, idnumber: alumno.codigo });
+      } catch (err) {
+        avisoCodigo = 'No se pudo guardar el código en Moodle: ' + err.message;
+      }
+    }
+
     const erroresMatricula = [];
     for (const grado of grados) {
       await pool.query(
@@ -153,7 +174,7 @@ router.post('/', async (req, res) => {
     );
 
     res.status(201).json({
-      alumno, moodle: moodleInfo,
+      alumno, moodle: moodleInfo, avisoCodigo,
       clasesMatriculadas: grados.map(g => g.nombre),
       erroresMatricula
     });

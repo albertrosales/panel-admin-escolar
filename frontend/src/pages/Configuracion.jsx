@@ -38,6 +38,14 @@ export default function Configuracion() {
     }
   }
 
+  async function sincronizarCodigos() {
+    setMensaje('Enviando códigos a Moodle...');
+    try {
+      const r = await api.admin.sincronizarCodigos();
+      setMensaje(r.actualizados + ' alumnos actualizados en Moodle' + (r.compartidos ? ' (' + r.compartidos + ' comparten cuenta de Moodle con otro alumno y se omitieron)' : '') + (r.total_errores ? '. Errores: ' + r.total_errores + ' — ' + r.errores.join(' | ') : '.'));
+    } catch (e2) { setMensaje('Error: ' + e2.message); }
+  }
+
   async function generarAhora() {
     setGenerando(true);
     setMensaje('');
@@ -107,6 +115,14 @@ export default function Configuracion() {
           </label>
           <div><button type="submit">Guardar</button></div>
         </form>
+      </div>
+
+      <div className="card">
+        <h3>Código de alumno en Moodle</h3>
+        <p className="text-sm text-gray-500 mb-3">
+          Cada alumno nuevo ya queda con su código en Moodle (campo "Número de ID"). Usa este botón una vez para enviar los códigos de los alumnos que ya existían.
+        </p>
+        <button onClick={sincronizarCodigos}>Enviar códigos a Moodle</button>
       </div>
 
       <div className="card">

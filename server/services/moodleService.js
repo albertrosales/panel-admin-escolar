@@ -51,6 +51,14 @@ async function getUserByEmail(opts) {
   return (res.users && res.users[0]) || null;
 }
 
+async function setIdNumber(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  return call('core_user_update_users', {
+    'users[0][id]': opts.userId,
+    'users[0][idnumber]': opts.idnumber
+  });
+}
+
 async function getCourses(opts) {
   const call = buildClient(opts.moodleUrl, opts.token);
   const courses = await call('core_course_get_courses');
@@ -85,7 +93,7 @@ async function getOrCreateUser(opts) {
   if (!opts.email) throw new Error('Se requiere un correo para crear el usuario en Moodle');
 
   const existente = await getUserByEmail({ moodleUrl: opts.moodleUrl, token: opts.token, email: opts.email });
-  if (existente) return { id: existente.id, creado: false };
+  if (existente) return { id: existente.id, creado: false, idnumber: existente.idnumber || '' };
 
   const partes = opts.nombreCompleto.trim().split(/\s+/);
   const firstname = partes[0];
@@ -135,6 +143,7 @@ async function createCourse(opts) {
 }
 
 module.exports = {
+  setIdNumber: setIdNumber,
   buildClient: buildClient,
   setEnrolmentSuspension: setEnrolmentSuspension,
   getUserByEmail: getUserByEmail,

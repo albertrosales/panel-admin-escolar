@@ -99,7 +99,8 @@ export const api = {
     login: (username, password, colegio_id) =>
       requestPortal('/portal/login', { method: 'POST', body: JSON.stringify({ username, password, colegio_id }) }),
     me: () => requestPortal('/portal/me'),
-    subirComprobante: (imagen) => requestPortal('/portal-comprobantes', { method: 'POST', body: JSON.stringify({ imagen }) }),
+    subirComprobante: (imagen, codigo) => requestPortal('/portal-comprobantes', { method: 'POST', body: JSON.stringify({ imagen, codigo }) }),
+    verificarCodigo: (codigo) => requestPortal('/portal-comprobantes/codigo/' + encodeURIComponent(codigo)),
     misComprobantes: () => requestPortal('/portal-comprobantes')
   },
   grados: {
@@ -110,6 +111,7 @@ export const api = {
   alumnos: {
     listar: (params) => request('/alumnos?' + new URLSearchParams(params)),
     detalle: (id) => request('/alumnos/' + id),
+    porCodigo: (codigo) => request('/alumnos/por-codigo/' + encodeURIComponent(codigo)),
     crear: (data) => request('/alumnos', { method: 'POST', body: JSON.stringify(data) }),
     actualizar: (id, data) => request('/alumnos/' + id, { method: 'PATCH', body: JSON.stringify(data) }),
     matricular: (id, data) => request('/alumnos/' + id + '/matricular', { method: 'POST', body: JSON.stringify(data) }),
@@ -169,6 +171,7 @@ export const api = {
     boletin: (id) => request('/notas/boletin/' + id, { method: 'POST' })
   },
   admin: {
+    sincronizarCodigos: () => request('/admin/sincronizar-codigos-moodle', { method: 'POST' }),
     cuentas: () => request('/admin/cuentas'),
     guardarCuentas: (cuentas_destino, conciliacion_monto_fecha) => request('/admin/cuentas', { method: 'POST', body: JSON.stringify({ cuentas_destino, conciliacion_monto_fecha }) }),
     mora: () => request('/admin/mora'),

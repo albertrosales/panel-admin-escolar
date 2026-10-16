@@ -10,7 +10,7 @@ Las cuentas pueden venir enmascaradas (ej. ****1968): copia lo que se vea. Si el
 Responde SOLO con un JSON, sin texto extra, con estas llaves (null si no aparece):
 {"es_comprobante": true/false, "banco": string, "monto": número sin símbolos, "fecha": "YYYY-MM-DD", "hora": "HH:MM" en 24h,
 "referencia": string, "cuenta_origen": string, "nombre_remitente": string, "cuenta_destino": string, "nombre_destinatario": string,
-"tipo": "transferencia" o "deposito_agente", "estado_banco": texto literal del estado (ej. "exitosa", "enviada y siendo procesada")}.
+"tipo": "transferencia" o "deposito_agente", "comentario": texto del campo comentario/detalle/concepto/nota/descripción que escribió quien pagó (null si está vacío o dice "sin detalle"), "estado_banco": texto literal del estado (ej. "exitosa", "enviada y siendo procesada")}.
 No inventes datos: si algo no se ve claro, usa null. es_comprobante=false si la imagen no es un comprobante de transferencia o depósito.`;
 
 const leerComprobante = (buffer, mime) => generarJSON({ prompt: PROMPT, mime, buffer });
@@ -135,7 +135,7 @@ async function confirmarComprobante(c, pagoId, quien) {
 }
 
 /** Recibe la imagen (dataURL), la lee y la deja en la cola de revisión */
-async function procesar({ colegioId, alumnoId, dataUrl, subidoTipo, subidoPor }) {
+async function procesar({ colegioId, alumnoId, codigo, dataUrl, subidoTipo, subidoPor }) {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl || '');
   if (!m) { const e = new Error('Imagen inválida (usa JPG, PNG o WEBP)'); e.status = 400; throw e; }
   const mime = m[1];
@@ -150,7 +150,23 @@ async function procesar({ colegioId, alumnoId, dataUrl, subidoTipo, subidoPor })
 
   const monto = d.monto != null && !isNaN(Number(d.monto)) ? Number(d.monto) : null;
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(d.fecha || '') ? d.fecha : null;
+  const notas = d.comentario ? String(d.comentario).slice(0, 300) : null;
+  // códigos de alumno escritos en el comentario (ej. 202601 o 2026-01)
+  const candidatos = [...String(notas || '').matchAll(/(?<!\d)(20\d{2})[\s\-]?(\d{2,4})(?!\d)/g)].map((x) => x[1] + x[2]);
+  let delComentario = null;
+  if (candidatos.length) {
+    const r = await pool.query('SELECT id FROM alumnos WHERE colegio_id = $1 AND codigo = ANY($2)', [colegioId, candidatos]);
+    if (r.rows.length === 1) delComentario = r.rows[0].id;
+  }
+
   let origen = alumnoId ? (subidoTipo === 'alumno' ? 'portal' : 'manual') : null;
+  if (codigo) {
+    const r = await pool.query('SELECT id FROM alumnos WHERE colegio_id = $1 AND codigo = $2', [colegioId, String(codigo).trim()]);
+    if (!r.rows.length) { const e = new Error('No existe un alumno con ese código'); e.status = 400; throw e; }
+    alumnoId = r.rows[0].id; origen = 'codigo_escrito';
+  } else if (!alumnoId || subidoTipo === 'admin') {
+    if (delComentario && !alumnoId) { alumnoId = delComentario; origen = 'codigo_nota'; }
+  }
   if (!alumnoId) {
     const b = await buscarAlumno(colegioId, d.nombre_remitente);
     alumnoId = b.alumno_id; origen = b.origen || null;
@@ -159,15 +175,16 @@ async function procesar({ colegioId, alumnoId, dataUrl, subidoTipo, subidoPor })
 
   const { rows: [c] } = await pool.query(
     `INSERT INTO comprobantes (colegio_id, alumno_id, pago_id, subido_tipo, subido_por, imagen, mime, hash, banco, monto, fecha_transferencia, hora,
-       referencia, cuenta_origen, nombre_remitente, cuenta_destino, nombre_destinatario, estado_banco, estado, alumno_origen)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
+       referencia, cuenta_origen, nombre_remitente, cuenta_destino, nombre_destinatario, estado_banco, estado, alumno_origen, texto_notas)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING id`,
     [colegioId, alumnoId, pagoId, subidoTipo, subidoPor, buffer, mime, hash, d.banco || null, monto, fecha, d.hora || null,
       d.referencia ? String(d.referencia) : null, d.cuenta_origen ? String(d.cuenta_origen) : null, d.nombre_remitente || null,
       d.cuenta_destino ? String(d.cuenta_destino) : null, d.nombre_destinatario || null, d.estado_banco || null,
-      alumnoId ? 'por_verificar' : 'requiere_alumno', origen]);
+      alumnoId ? 'por_verificar' : 'requiere_alumno', origen, notas]);
 
   const extra = [];
   if (d.es_comprobante === false) extra.push('no_es_comprobante');
+  if (delComentario && alumnoId && delComentario !== alumnoId) extra.push('codigo_nota_distinto');
   const flags = await refrescarFlags(c.id);
   if (extra.length || fallo) {
     const todas = [...new Set([...(fallo ? ['ocr_fallo'] : []), ...extra, ...flags])];

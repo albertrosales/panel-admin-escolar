@@ -13,10 +13,16 @@ const FLAGS = {
   fecha_antigua: ['Fecha antigua', 'amarillo'],
   fecha_futura: ['Fecha futura', 'amarillo'],
   sin_referencia: ['Sin referencia', 'amarillo'],
-  sin_nombre: ['Sin nombre del que paga', 'amarillo']
+  sin_nombre: ['Sin nombre del que paga', 'amarillo'],
+  codigo_nota_distinto: ['El comentario trae el código de otro alumno', 'amarillo']
 };
 
 const pendiente0 = (c) => c.estado === 'requiere_alumno' || c.estado === 'por_verificar';
+
+const ORIGEN = {
+  ocr_alumno: 'por el nombre de quien pagó', ocr_encargado: 'por el nombre del encargado', codigo_nota: 'por el código escrito en el comentario',
+  codigo_escrito: 'por el código que escribió quien subió el pago', portal: 'subido por el propio alumno', manual: 'elegido por administración'
+};
 
 function Miniatura({ id }) {
   const [src, setSrc] = useState(null);
@@ -76,6 +82,8 @@ function Tarjeta({ c, alumnos, onCambio }) {
             {c.deposito_probable.descripcion ? ' · ' + c.deposito_probable.descripcion : ''}. Si lo reconoces, aprueba el pago.
           </p>
         )}
+        {c.texto_notas && <p className="text-gray-500">Comentario del pago: “{c.texto_notas}”</p>}
+        {c.alumno_origen && ORIGEN[c.alumno_origen] && c.alumno_nombre && <p className="text-gray-500">Alumno asignado {ORIGEN[c.alumno_origen]}.</p>}
         <p className="text-gray-500">Subido por {c.subido_por} ({c.subido_tipo === 'alumno' ? 'alumno' : 'administración'})</p>
 
         {pendiente ? (
@@ -109,6 +117,8 @@ export default function Comprobantes() {
   const [alumnos, setAlumnos] = useState([]);
   const [tab, setTab] = useState('');
   const [alumnoTxt, setAlumnoTxt] = useState('');
+  const [codigo, setCodigo] = useState('');
+  const [conf, setConf] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [msg, setMsg] = useState('');
   const fileRef = useRef();
@@ -116,6 +126,16 @@ export default function Comprobantes() {
   const cargar = () => api.comprobantes.listar(tab).then(setLista).catch((e) => setMsg(e.message));
   useEffect(() => { cargar(); }, [tab]);
   useEffect(() => { api.alumnos.listar({}).then(setAlumnos); }, []);
+
+  async function verificar(v) {
+    setCodigo(v); setConf(null);
+    if (v.trim().length < 6) return;
+    try { setConf({ alumno: await api.alumnos.porCodigo(v.trim()) }); } catch (err) { setConf({ error: err.message }); }
+  }
+  function confirmarCodigo() {
+    setAlumnoTxt(`${conf.alumno.nombre_completo} · ${conf.alumno.codigo} #${conf.alumno.id}`);
+    setCodigo(''); setConf(null);
+  }
 
   async function subir(e) {
     const files = Array.from(e.target.files || []);
@@ -135,7 +155,7 @@ export default function Comprobantes() {
   return (
     <div>
       <h2>Comprobantes de pago</h2>
-      <datalist id="lista-alumnos">{alumnos.map((a) => <option key={a.id} value={`${a.nombre_completo} #${a.id}`} />)}</datalist>
+      <datalist id="lista-alumnos">{alumnos.map((a) => <option key={a.id} value={`${a.nombre_completo} · ${a.codigo} #${a.id}`} />)}</datalist>
 
       <div className="card">
         <h3>Subir comprobante</h3>
@@ -147,8 +167,21 @@ export default function Comprobantes() {
           <label>Alumno (opcional)
             <input list="lista-alumnos" value={alumnoTxt} onChange={(e) => setAlumnoTxt(e.target.value)} placeholder="Si ya sabes de quién es" />
           </label>
+          <label>Código de alumno (opcional)
+            <input value={codigo} onChange={(e) => verificar(e.target.value)} placeholder="Ej. 202601" inputMode="numeric" />
+          </label>
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={subir} disabled={subiendo} className="w-auto" />
         </div>
+        {conf && conf.error && <p className="text-sm text-red-600 mt-2">{conf.error}</p>}
+        {conf && conf.alumno && (
+          <div className="bg-amber-50 rounded-xl p-3 mt-3 text-sm">
+            <p>¿El código {conf.alumno.codigo} es de <b>{conf.alumno.nombre_completo}</b>?</p>
+            <div className="flex gap-2 mt-2">
+              <button onClick={confirmarCodigo}>Sí, es él/ella</button>
+              <button className="secondary" onClick={() => { setCodigo(''); setConf(null); }}>No, corregir</button>
+            </div>
+          </div>
+        )}
         {msg && <p className="text-sm text-gray-500 mt-2">{msg}</p>}
       </div>
 

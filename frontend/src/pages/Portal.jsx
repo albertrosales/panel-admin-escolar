@@ -40,7 +40,7 @@ export default function Portal() {
             {perfil.nombre_completo}{' '}
             {datos.tipo === 'alumno' && <EstadoBadge estado={perfil.estado_pago} />}
           </h2>
-          <p className="text-sm text-gray-500">{datos.tipo === 'alumno' ? 'Alumno' : 'Docente'}</p>
+          <p className="text-sm text-gray-500">{datos.tipo === 'alumno' ? 'Alumno · Código ' + perfil.codigo : 'Docente'}</p>
         </div>
         <button className="secondary" onClick={salir}>Cerrar sesión</button>
       </div>
@@ -56,25 +56,53 @@ function SubirComprobante() {
   const [lista, setLista] = useState([]);
   const [msg, setMsg] = useState('');
   const [subiendo, setSubiendo] = useState(false);
+  const [codigo, setCodigo] = useState('');
+  const [conf, setConf] = useState(null); // { nombre, estado: 'pregunta' | 'ok' }
   const cargar = () => api.portal.misComprobantes().then(setLista).catch(() => {});
   useEffect(() => { cargar(); }, []);
 
+  async function verificar(v) {
+    setCodigo(v); setConf(null);
+    if (v.trim().length < 6) return;
+    try {
+      const r = await api.portal.verificarCodigo(v.trim());
+      setConf(r.propio ? { nombre: r.nombre, estado: 'ok' } : { nombre: r.nombre, estado: 'pregunta' });
+    } catch (err) { setConf({ error: err.message }); }
+  }
+
   async function subir(e) {
     const f = e.target.files && e.target.files[0];
+    const input = e.target;
     if (!f) return;
+    if (codigo.trim() && (!conf || conf.error || conf.estado === 'pregunta')) { setMsg('Confirma primero el código de alumno.'); input.value = ''; return; }
     setSubiendo(true); setMsg('Enviando comprobante...');
     try {
-      await api.portal.subirComprobante(await comprimirImagen(f));
+      await api.portal.subirComprobante(await comprimirImagen(f), codigo.trim() || undefined);
       setMsg('Comprobante enviado. Está pendiente de validación; el colegio lo confirmará.');
+      setCodigo(''); setConf(null);
       cargar();
     } catch (err) { setMsg('Error: ' + err.message); }
-    setSubiendo(false); e.target.value = '';
+    setSubiendo(false); input.value = '';
   }
 
   return (
     <div className="card">
       <h3>Enviar comprobante de pago</h3>
-      <p className="text-sm text-gray-500 mb-3">Sube la captura o foto de tu transferencia o depósito.</p>
+      <p className="text-sm text-gray-500 mb-3">Sube la captura o foto de tu transferencia o depósito. Si pagas por otro alumno, escribe su código.</p>
+      <label className="max-w-xs mb-3">Código de alumno (opcional)
+        <input value={codigo} onChange={(e) => verificar(e.target.value)} placeholder="Ej. 202601" inputMode="numeric" />
+      </label>
+      {conf && conf.error && <p className="text-sm text-red-600 mb-2">{conf.error}</p>}
+      {conf && conf.estado === 'pregunta' && (
+        <div className="bg-amber-50 rounded-xl p-3 mb-3 text-sm">
+          <p>¿Este pago es de <b>{conf.nombre}</b>?</p>
+          <div className="flex gap-2 mt-2">
+            <button onClick={() => setConf({ ...conf, estado: 'ok' })}>Sí, es él/ella</button>
+            <button className="secondary" onClick={() => { setCodigo(''); setConf(null); }}>No, corregir código</button>
+          </div>
+        </div>
+      )}
+      {conf && conf.estado === 'ok' && <p className="text-sm text-emerald-700 mb-2">Pago para: <b>{conf.nombre}</b></p>}
       <input type="file" accept="image/*" onChange={subir} disabled={subiendo} className="w-auto" />
       {msg && <p className="text-sm text-gray-500 mt-2">{msg}</p>}
       {lista.length > 0 && (

@@ -104,7 +104,7 @@ router.get('/me', requirePortal, async (req, res) => {
 
     if (u.tipo === 'alumno') {
       const alumnoResult = await pool.query(
-        'SELECT nombre_completo, estado_pago, fecha_matricula, telefono, direccion FROM alumnos WHERE id = $1',
+        'SELECT nombre_completo, codigo, estado_pago, fecha_matricula, telefono, direccion FROM alumnos WHERE id = $1',
         [u.id]
       );
       const alumno = alumnoResult.rows[0];
