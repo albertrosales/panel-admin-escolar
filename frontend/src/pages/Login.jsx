@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api, guardarSesion } from '../api';
 
 export default function Login() {
@@ -68,6 +68,9 @@ export default function Login() {
             </button>
           </div>
           <p className="login-footer">Acceso seguro · Campus Virtual</p>
+          <Link className="support-button" to="/portal/login">
+            Soy alumno o encargado <span aria-hidden="true">→</span>
+          </Link>
           <a className="support-button" href="https://wa.me/50489012215" target="_blank" rel="noreferrer">
             Soporte técnico <span aria-hidden="true">↗</span>
           </a>
