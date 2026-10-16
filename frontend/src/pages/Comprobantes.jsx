@@ -57,9 +57,10 @@ function Tarjeta({ c, alumnos, onCambio }) {
     try { await guardar(); await api.comprobantes.aprobar(c.id, pagoId || undefined); onCambio(); } catch (e) { setMsg(e.message); }
   }
   async function rechazar() {
-    const nota = window.prompt('Motivo del rechazo (opcional)');
+    const nota = window.prompt('Motivo del rechazo (se enviará al encargado por correo)');
     if (nota === null) return;
-    await api.comprobantes.rechazar(c.id, nota); onCambio();
+    if (!nota.trim()) { setMsg('Escribe el motivo del rechazo'); return; }
+    try { await api.comprobantes.rechazar(c.id, nota.trim()); onCambio(); } catch (e) { setMsg(e.message); }
   }
 
   const pendiente = c.estado === 'requiere_alumno' || c.estado === 'por_verificar';

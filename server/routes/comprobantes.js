@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const notif = require('../services/correo/notificaciones');
 const { procesar, refrescarFlags, sincronizarAcceso, confirmarComprobante } = require('../services/comprobanteService');
 
 const COLS = `c.id, c.alumno_id, c.pago_id, c.subido_tipo, c.subido_por, c.banco, c.monto, c.fecha_transferencia, c.hora, c.referencia,
@@ -69,7 +70,7 @@ router.patch('/:id', async (req, res) => {
       params.push(req.params.id);
       await pool.query(`UPDATE comprobantes SET ${sets.join(', ')} WHERE id = $${params.length} AND estado IN ('requiere_alumno','por_verificar')`, params);
       await refrescarFlags(req.params.id);
-      if (b.alumno_id) await sincronizarAcceso(b.alumno_id);
+      if (b.alumno_id) { await sincronizarAcceso(b.alumno_id); notif.comprobanteRecibido(req.params.id); }
     }
     res.json(await uno(req.params.id));
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -91,10 +92,11 @@ router.post('/:id/aprobar', async (req, res) => {
 
 router.post('/:id/rechazar', async (req, res) => {
   try {
-    await pool.query(`UPDATE comprobantes SET estado='rechazado', nota=$1, revisado_por=$2, revisado_en=NOW() WHERE id=$3 AND estado IN ('requiere_alumno','por_verificar')`,
-      [req.body.nota || null, req.usuario.nombre, req.params.id]);
-    const r = await pool.query('SELECT alumno_id FROM comprobantes WHERE id=$1', [req.params.id]);
-    if (r.rows[0].alumno_id) await sincronizarAcceso(r.rows[0].alumno_id);
+    const nota = String(req.body.nota || '').trim();
+    if (!nota) return res.status(400).json({ error: 'Escribe el motivo del rechazo' });
+    const r = await pool.query(`UPDATE comprobantes SET estado='rechazado', nota=$1, revisado_por=$2, revisado_en=NOW() WHERE id=$3 AND estado IN ('requiere_alumno','por_verificar') RETURNING alumno_id`,
+      [nota, req.usuario.nombre, req.params.id]);
+    if (r.rows[0] && r.rows[0].alumno_id) { await sincronizarAcceso(r.rows[0].alumno_id); notif.comprobanteRechazado(req.params.id); }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

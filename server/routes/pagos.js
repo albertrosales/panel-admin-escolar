@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const notif = require('../services/correo/notificaciones');
 const { evaluarEstadoAlumno } = require('../services/estadoPagoService');
 
 async function alumnoDelColegio(alumnoId, colegioId) {
@@ -65,6 +66,7 @@ router.post('/:id/marcar-pagado', async (req, res) => {
     );
 
     const estado = await evaluarEstadoAlumno(pago.alumno_id);
+    notif.pagoConfirmado(pago.id);
     res.json({ pago, estado });
   } catch (err) {
     res.status(500).json({ error: err.message });

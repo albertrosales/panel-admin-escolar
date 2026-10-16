@@ -152,6 +152,18 @@ export const api = {
     aprobar: (id, pago_id) => request('/comprobantes/' + id + '/aprobar', { method: 'POST', body: JSON.stringify({ pago_id }) }),
     rechazar: (id, nota) => request('/comprobantes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ nota }) })
   },
+  correos: {
+    estado: () => request('/correos/estado'),
+    guardarEstado: (data) => request('/correos/estado', { method: 'PUT', body: JSON.stringify(data) }),
+    plantillas: () => request('/correos/plantillas'),
+    guardarPlantilla: (clave, data) => request('/correos/plantillas/' + clave, { method: 'PUT', body: JSON.stringify(data) }),
+    restaurar: (clave) => request('/correos/plantillas/' + clave + '/restaurar', { method: 'POST' }),
+    vistaPrevia: (data) => request('/correos/vista-previa', { method: 'POST', body: JSON.stringify(data) }),
+    prueba: (data) => request('/correos/prueba', { method: 'POST', body: JSON.stringify(data) }),
+    enviar: (data) => request('/correos/enviar', { method: 'POST', body: JSON.stringify(data) }),
+    historial: (estado) => request('/correos/historial' + (estado ? '?estado=' + estado : '')),
+    reintentar: (id) => request('/correos/' + id + '/reintentar', { method: 'POST' })
+  },
   conciliacion: {
     subir: (archivo, nombre, cuenta) => request('/conciliacion', { method: 'POST', body: JSON.stringify({ archivo, nombre, cuenta }) })
   },

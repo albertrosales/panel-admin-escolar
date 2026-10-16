@@ -20,6 +20,8 @@ const comprobantesRoutes = require('./routes/comprobantes');
 const comprobantesPortalRoutes = require('./routes/comprobantesPortal');
 const requirePortal = require('./middleware/portalAuth');
 const conciliacionRoutes = require('./routes/conciliacion');
+const correosRoutes = require('./routes/correos');
+const notif = require('./services/correo/notificaciones');
 const migrar = require('./services/migraciones');
 const requireAuth = require('./middleware/auth');
 const revisarPagos = require('./jobs/revisarPagos');
@@ -71,13 +73,21 @@ app.use('/api/calendario', requireAuth, calendarioRoutes);
 app.use('/api/asistencia', requireAuth, asistenciaRoutes);
 app.use('/api/notas', requireAuth, notasRoutes);
 app.use('/api/comprobantes', requireAuth, comprobantesRoutes);
+app.use('/api/correos', requireAuth, correosRoutes);
 app.use('/api/conciliacion', requireAuth, conciliacionRoutes);
 
 cron.schedule('0 6 * * *', () => {
   revisarPagos().catch(err => console.error('Error en cron de pagos:', err));
 });
 
+// Cola de correos: reintenta pendientes cada 5 minutos
+cron.schedule('*/5 * * * *', () => { notif.procesarPendientes().catch(err => console.error('Cola de correos:', err.message)); });
+
 const PORT = process.env.PORT || 3000;
 migrar()
   .catch(err => console.error('Error en migraciones:', err.message))
-  .finally(() => app.listen(PORT, () => console.log(`Panel administrativo escuchando en puerto ${PORT}`)));
+  .finally(() => app.listen(PORT, () => {
+    console.log(`Panel administrativo escuchando en puerto ${PORT}`);
+    // Al despertar (Render gratis duerme): ponerse al día con avisos de cobro y correos pendientes (no duplica)
+    notif.notificarCobros().then(() => notif.procesarPendientes()).catch(err => console.error('Notificaciones al iniciar:', err.message));
+  }));

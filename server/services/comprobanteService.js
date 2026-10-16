@@ -3,6 +3,7 @@ const pool = require('../db');
 const { generarJSON } = require('./ia');
 const { evaluarEstadoAlumno } = require('./estadoPagoService');
 const { setEnrolmentSuspension } = require('./moodleService');
+const notif = require('./correo/notificaciones');
 
 const PROMPT = `Lee este comprobante de transferencia o depósito bancario de Honduras (Banpaís, BAC, Ficohsa, Atlántida, Occidente, etc.).
 Puede ser captura de app, correo de notificación, o FOTO de un recibo en papel de agente bancario (en ese caso suele no traer nombre de quien paga; el nombre que aparece junto a la cuenta es el del beneficiario).
@@ -131,6 +132,7 @@ async function confirmarComprobante(c, pagoId, quien) {
     [c.alumno_id, `Pago de ${pago.periodo} confirmado por transferencia`, JSON.stringify({ monto: pago.monto, comprobante_id: c.id, referencia: c.referencia })]);
   const estado = await evaluarEstadoAlumno(c.alumno_id);
   await sincronizarAcceso(c.alumno_id);
+  notif.pagoConfirmado(pago.id);
   return estado;
 }
 
@@ -190,6 +192,7 @@ async function procesar({ colegioId, alumnoId, codigo, dataUrl, subidoTipo, subi
     const todas = [...new Set([...(fallo ? ['ocr_fallo'] : []), ...extra, ...flags])];
     await pool.query('UPDATE comprobantes SET flags = $1 WHERE id = $2', [JSON.stringify(todas), c.id]);
   }
+  if (alumnoId) notif.comprobanteRecibido(c.id);
   if (alumnoId) await sincronizarAcceso(alumnoId).catch((e) => console.error('acceso provisional:', e.message));
   return c.id;
 }

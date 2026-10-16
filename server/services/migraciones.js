@@ -85,6 +85,43 @@ module.exports = async function migrar() {
     CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(colegio_id, fecha);
   `);
 
+  // ---- Notificaciones por correo
+  await pool.query(`
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS correo_color VARCHAR(9) DEFAULT '#2455e6';
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS correo_logo_url VARCHAR(300);
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS correo_pie VARCHAR(300);
+    CREATE TABLE IF NOT EXISTS plantillas_correo (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      clave VARCHAR(50) NOT NULL,
+      asunto VARCHAR(250) NOT NULL,
+      cuerpo TEXT NOT NULL,
+      activa_auto BOOLEAN,
+      parametro INT,
+      UNIQUE (colegio_id, clave)
+    );
+    CREATE TABLE IF NOT EXISTS notificaciones_correo (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      alumno_id INT REFERENCES alumnos(id) ON DELETE SET NULL,
+      plantilla_clave VARCHAR(50),
+      destinatario VARCHAR(150),
+      asunto VARCHAR(250),
+      cuerpo_texto TEXT,
+      cuerpo_html TEXT,
+      estado VARCHAR(12) DEFAULT 'pendiente',
+      error VARCHAR(300),
+      intentos INT DEFAULT 0,
+      referencia VARCHAR(80),
+      lote VARCHAR(30),
+      enviado_por VARCHAR(150),
+      creado_en TIMESTAMP DEFAULT NOW(),
+      enviado_en TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_notif_colegio ON notificaciones_correo(colegio_id, creado_en DESC);
+    CREATE INDEX IF NOT EXISTS idx_notif_ref ON notificaciones_correo(colegio_id, plantilla_clave, referencia);
+  `);
+
   // ---- Código de alumno: AAAA + número correlativo por colegio (202601, 202602...)
   await pool.query(`ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS codigo VARCHAR(12)`);
   await pool.query(`

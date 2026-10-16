@@ -21,6 +21,8 @@ async function run() {
   const recargos = await aplicarRecargos();
   if (recargos > 0) console.log(`Recargo por mora aplicado a ${recargos} pago(s).`);
 
+  await require('../services/correo/notificaciones').notificarCobros().catch(err => console.error('Avisos de cobro:', err.message));
+
   const resultados = await evaluarTodosLosAlumnos();
   const cambios = resultados.filter(r => r.cambio);
   console.log(`Revisión completa. ${cambios.length} alumnos cambiaron de estado.`);

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const notif = require('../services/correo/notificaciones');
 
 async function gradoOk(id, colegioId) {
   if (!/^\d+$/.test(String(id))) return false;
@@ -27,6 +28,7 @@ router.post('/', async (req, res) => {
     const { grado_id, fecha, registros } = req.body;
     if (!(await gradoOk(grado_id, req.colegioId)) || !/^\d{4}-\d{2}-\d{2}$/.test(fecha || '') || !Array.isArray(registros)) return res.status(400).json({ error: 'Datos inválidos' });
     let n = 0;
+    const guardados = [];
     for (const r of registros) {
       if (!['P', 'A', 'T', 'J'].includes(r.estado) || !/^\d+$/.test(String(r.alumno_id))) continue;
       const ok = await pool.query('SELECT 1 FROM alumnos WHERE id=$1 AND colegio_id=$2', [r.alumno_id, req.colegioId]);
@@ -36,7 +38,9 @@ router.post('/', async (req, res) => {
          ON CONFLICT (alumno_id, grado_id, fecha) DO UPDATE SET estado = EXCLUDED.estado`,
         [req.colegioId, r.alumno_id, grado_id, fecha, r.estado]);
       n++;
+      guardados.push({ alumno_id: Number(r.alumno_id), estado: r.estado });
     }
+    notif.asistencia(req.colegioId, fecha, guardados);
     res.json({ guardados: n });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
