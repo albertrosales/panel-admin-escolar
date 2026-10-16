@@ -1,0 +1,115 @@
+// Administración de matrícula en línea: períodos (los abre el director) y solicitudes
+const express = require('express');
+const router = express.Router();
+const pool = require('../db');
+const notif = require('../services/correo/notificaciones');
+
+const HOY = "(NOW() AT TIME ZONE 'America/Tegucigalpa')::date";
+const fechaOk = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+
+function leerPeriodo(b) {
+  const anio = parseInt(b.anio_escolar, 10);
+  if (!anio || anio < 2000 || anio > 2100) throw Object.assign(new Error('Año escolar inválido'), { status: 400 });
+  if (!fechaOk(b.fecha_inicio) || !fechaOk(b.fecha_fin)) throw Object.assign(new Error('Indica fecha de inicio y de cierre'), { status: 400 });
+  if (b.fecha_fin < b.fecha_inicio) throw Object.assign(new Error('La fecha de cierre no puede ser anterior al inicio'), { status: 400 });
+  const monto = b.monto === '' || b.monto == null ? null : Number(b.monto);
+  if (monto != null && (!isFinite(monto) || monto < 0)) throw Object.assign(new Error('Monto inválido'), { status: 400 });
+  return [anio, b.fecha_inicio, b.fecha_fin, monto, (b.instrucciones || '').trim().slice(0, 1000) || null, !!b.aprobacion_automatica, b.bloquear_morosos !== false];
+}
+const err = (res, e) => res.status(e.status || 500).json({ error: e.code === '23505' ? 'Ya existe una matrícula para ese año escolar' : e.message });
+
+router.get('/periodos', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT p.*, p.fecha_inicio::text AS fecha_inicio, p.fecha_fin::text AS fecha_fin, (p.fecha_inicio <= ${HOY} AND p.fecha_fin >= ${HOY}) AS abierta,
+        (SELECT COUNT(*)::int FROM solicitudes_matricula s WHERE s.periodo_id = p.id) AS total,
+        (SELECT COUNT(*)::int FROM solicitudes_matricula s WHERE s.periodo_id = p.id AND s.estado = 'pendiente') AS pendientes
+       FROM periodos_matricula p WHERE p.colegio_id = $1 ORDER BY p.anio_escolar DESC`, [req.colegioId]);
+    res.json(rows);
+  } catch (e) { err(res, e); }
+});
+
+router.post('/periodos', async (req, res) => {
+  try {
+    const v = leerPeriodo(req.body);
+    const { rows } = await pool.query(
+      `INSERT INTO periodos_matricula (colegio_id, anio_escolar, fecha_inicio, fecha_fin, monto, instrucciones, aprobacion_automatica, bloquear_morosos)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [req.colegioId, ...v]);
+    res.status(201).json(rows[0]);
+  } catch (e) { err(res, e); }
+});
+
+router.put('/periodos/:id', async (req, res) => {
+  try {
+    const v = leerPeriodo(req.body);
+    const { rows } = await pool.query(
+      `UPDATE periodos_matricula SET anio_escolar=$3, fecha_inicio=$4, fecha_fin=$5, monto=$6, instrucciones=$7, aprobacion_automatica=$8, bloquear_morosos=$9
+       WHERE id=$1 AND colegio_id=$2 RETURNING *`, [req.params.id, req.colegioId, ...v]);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+    res.json(rows[0]);
+  } catch (e) { err(res, e); }
+});
+
+router.delete('/periodos/:id', async (req, res) => {
+  try {
+    const { rows: [t] } = await pool.query(
+      `SELECT COUNT(*)::int n FROM solicitudes_matricula s JOIN periodos_matricula p ON p.id = s.periodo_id WHERE p.id=$1 AND p.colegio_id=$2`, [req.params.id, req.colegioId]);
+    if (t.n) return res.status(400).json({ error: 'Ya tiene solicitudes. Cambia las fechas para cerrarlo en lugar de eliminarlo.' });
+    await pool.query('DELETE FROM periodos_matricula WHERE id=$1 AND colegio_id=$2', [req.params.id, req.colegioId]);
+    res.json({ ok: true });
+  } catch (e) { err(res, e); }
+});
+
+router.get('/solicitudes', async (req, res) => {
+  try {
+    const q = [req.colegioId]; let w = '';
+    if (req.query.periodo_id) { q.push(req.query.periodo_id); w += ` AND s.periodo_id = $${q.length}`; }
+    if (req.query.estado) { q.push(req.query.estado); w += ` AND s.estado = $${q.length}`; }
+    const { rows } = await pool.query(
+      `SELECT s.*, a.nombre_completo, a.codigo, ga.nombre AS grado_actual, g.nombre AS grado_destino, p.anio_escolar
+       FROM solicitudes_matricula s JOIN alumnos a ON a.id = s.alumno_id JOIN periodos_matricula p ON p.id = s.periodo_id
+       LEFT JOIN grados g ON g.id = s.grado_id LEFT JOIN grados ga ON ga.id = a.grado_id
+       WHERE s.colegio_id = $1 ${w} ORDER BY (s.estado='pendiente') DESC, s.creado_en DESC LIMIT 500`, q);
+    res.json(rows);
+  } catch (e) { err(res, e); }
+});
+
+router.post('/solicitudes/:id/aprobar', async (req, res) => {
+  try {
+    const { rows: [s] } = await pool.query(
+      `UPDATE solicitudes_matricula SET estado='aprobada', motivo_rechazo=NULL, revisado_por=$3, revisado_en=NOW()
+       WHERE id=$1 AND colegio_id=$2 AND estado <> 'aprobada' RETURNING *`, [req.params.id, req.colegioId, req.usuario.nombre || req.usuario.correo || 'admin']);
+    if (!s) return res.status(404).json({ error: 'Solicitud no encontrada o ya aprobada' });
+    await aplicarSolicitud(s);
+    notif.matricula(s.id, 'aprobada');
+    res.json(s);
+  } catch (e) { err(res, e); }
+});
+
+router.post('/solicitudes/:id/rechazar', async (req, res) => {
+  try {
+    const motivo = String(req.body.motivo || '').trim().slice(0, 300);
+    if (!motivo) return res.status(400).json({ error: 'Escribe el motivo del rechazo' });
+    const { rows: [s] } = await pool.query(
+      `UPDATE solicitudes_matricula SET estado='rechazada', motivo_rechazo=$3, revisado_por=$4, revisado_en=NOW()
+       WHERE id=$1 AND colegio_id=$2 AND estado <> 'rechazada' RETURNING *`, [req.params.id, req.colegioId, motivo, req.usuario.nombre || req.usuario.correo || 'admin']);
+    if (!s) return res.status(404).json({ error: 'Solicitud no encontrada o ya rechazada' });
+    notif.matricula(s.id, 'rechazada');
+    res.json(s);
+  } catch (e) { err(res, e); }
+});
+
+/** Al aprobar: actualiza los datos de contacto de la familia y deja constancia en el historial */
+async function aplicarSolicitud(s) {
+  await pool.query(
+    `UPDATE alumnos SET nombre_encargado = COALESCE(NULLIF($2,''), nombre_encargado), telefono_encargado = COALESCE(NULLIF($3,''), telefono_encargado),
+       correo_encargado = COALESCE(NULLIF($4,''), correo_encargado), telefono = COALESCE(NULLIF($5,''), telefono), direccion = COALESCE(NULLIF($6,''), direccion)
+     WHERE id = $1`, [s.alumno_id, s.nombre_encargado, s.telefono_encargado, s.correo_encargado, s.telefono, s.direccion]);
+  const { rows: [i] } = await pool.query(
+    `SELECT p.anio_escolar, g.nombre AS grado FROM periodos_matricula p LEFT JOIN grados g ON g.id = $2 WHERE p.id = $1`, [s.periodo_id, s.grado_id]);
+  await pool.query("INSERT INTO alumno_historial (alumno_id, tipo, descripcion) VALUES ($1,'matricula',$2)",
+    [s.alumno_id, `Matrícula ${i.anio_escolar} aprobada${i.grado ? ' · ' + i.grado : ''}`]);
+}
+
+module.exports = router;
+module.exports.aplicarSolicitud = aplicarSolicitud;

@@ -152,4 +152,41 @@ module.exports = async function migrar() {
   await pool.query(`CREATE TRIGGER trg_codigo_alumno BEFORE INSERT ON alumnos FOR EACH ROW EXECUTE FUNCTION asignar_codigo_alumno()`);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_alumnos_codigo ON alumnos(colegio_id, codigo)`);
   await pool.query(`ALTER TABLE alumnos ALTER COLUMN codigo SET NOT NULL`);
+  await pool.query(`
+    ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS telefono VARCHAR(30);
+    ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS direccion VARCHAR(250);
+    CREATE TABLE IF NOT EXISTS periodos_matricula (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      anio_escolar INT NOT NULL,
+      fecha_inicio DATE NOT NULL,
+      fecha_fin DATE NOT NULL,
+      monto NUMERIC(10,2),
+      instrucciones TEXT,
+      aprobacion_automatica BOOLEAN DEFAULT FALSE,
+      bloquear_morosos BOOLEAN DEFAULT TRUE,
+      creado_en TIMESTAMP DEFAULT NOW(),
+      UNIQUE (colegio_id, anio_escolar)
+    );
+    CREATE TABLE IF NOT EXISTS solicitudes_matricula (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      alumno_id INT REFERENCES alumnos(id) ON DELETE CASCADE,
+      periodo_id INT REFERENCES periodos_matricula(id) ON DELETE CASCADE,
+      grado_id INT REFERENCES grados(id) ON DELETE SET NULL,
+      nombre_encargado VARCHAR(150),
+      telefono_encargado VARCHAR(30),
+      correo_encargado VARCHAR(150),
+      telefono VARCHAR(30),
+      direccion VARCHAR(250),
+      observaciones VARCHAR(500),
+      estado VARCHAR(12) NOT NULL DEFAULT 'pendiente',
+      motivo_rechazo VARCHAR(300),
+      revisado_por VARCHAR(150),
+      revisado_en TIMESTAMP,
+      creado_en TIMESTAMP DEFAULT NOW(),
+      UNIQUE (alumno_id, periodo_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_solic_matricula_periodo ON solicitudes_matricula(periodo_id, estado);
+  `);
 };

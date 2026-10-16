@@ -108,6 +108,16 @@ const comprobanteRechazado = (id) => seguro((async () => {
   if (c && c.alumno_id) await auto('comprobante_rechazado', c.alumno_id, 'comp:' + id, { extras: { monto: lempiras(c.monto), motivo_rechazo: c.nota } });
 })());
 
+/** Matrícula: evento = recibida | aprobada | rechazada */
+const matricula = (solicitudId, evento) => seguro((async () => {
+  const { rows: [m] } = await pool.query(
+    `SELECT s.alumno_id, s.motivo_rechazo, p.anio_escolar, g.nombre AS grado FROM solicitudes_matricula s
+     JOIN periodos_matricula p ON p.id = s.periodo_id LEFT JOIN grados g ON g.id = s.grado_id WHERE s.id = $1`, [solicitudId]);
+  if (!m) return;
+  await auto('matricula_' + evento, m.alumno_id, 'matricula:' + solicitudId + ':' + evento,
+    { extras: { periodo_academico: String(m.anio_escolar), grado: m.grado, motivo_rechazo: m.motivo_rechazo } });
+})());
+
 /** Asistencia registrada: ausencia, ausencias consecutivas y registro general (solo fechas recientes) */
 const asistencia = (colegioId, fecha, registros) => seguro((async () => {
   if (!configurado()) return;
@@ -241,5 +251,5 @@ async function procesarPendientes() {
 
 module.exports = {
   PLANTILLAS, cargarPlantilla, variablesAlumno, vistaPrevia, enviarManual, procesarPendientes, notificarCobros,
-  comprobanteRecibido, pagoConfirmado, comprobanteRechazado, asistencia, armar
+  comprobanteRecibido, pagoConfirmado, comprobanteRechazado, matricula, asistencia, armar
 };

@@ -47,6 +47,18 @@ const PLANTILLAS = [
   { clave: 'recordatorio_matricula', grupo: 'Académico', nombre: 'Recordatorio de matrícula',
     asunto: 'Recordatorio de matrícula',
     cuerpo: `Le recordamos completar la matrícula de {{nombre_alumno}} para el período {{periodo_academico}}.\n\nPara conocer los requisitos, comuníquese con administración.\n\n${INST}`, auto: null },
+  { clave: 'matricula_recibida', grupo: 'Académico', nombre: 'Solicitud de matrícula recibida',
+    asunto: 'Solicitud de matrícula recibida',
+    cuerpo: `Estimado padre, madre o encargado:\n\nHemos recibido la solicitud de matrícula de {{nombre_alumno}} para el año {{periodo_academico}}.\n\nLa estamos revisando y le avisaremos cuando esté lista.\n\n${INST}`,
+    auto: { evento: 'Se envía cuando el alumno o su familia envía la solicitud de matrícula', activa: true } },
+  { clave: 'matricula_aprobada', grupo: 'Académico', nombre: 'Matrícula aprobada',
+    asunto: 'Matrícula aprobada',
+    cuerpo: `Estimado padre, madre o encargado:\n\nLa matrícula de {{nombre_alumno}} para el año {{periodo_academico}} fue aprobada.\n\nGrado: {{grado}}\n\nGracias por confiar en nosotros.\n\n${INST}`,
+    auto: { evento: 'Se envía cuando administración aprueba la matrícula', activa: true } },
+  { clave: 'matricula_rechazada', grupo: 'Académico', nombre: 'Matrícula rechazada',
+    asunto: 'Matrícula pendiente de corrección',
+    cuerpo: `Estimado padre, madre o encargado:\n\nLa solicitud de matrícula de {{nombre_alumno}} para el año {{periodo_academico}} no pudo ser aprobada.\n\nMotivo: {{motivo_rechazo}}\n\nPuede corregir los datos y enviar la solicitud de nuevo mientras la matrícula esté abierta.\n\n${INST}`,
+    auto: { evento: 'Se envía cuando administración rechaza la matrícula, con el motivo', activa: true } },
   { clave: 'comunicado_general', grupo: 'Dirección', nombre: 'Comunicado general del director',
     asunto: '{{asunto}}',
     cuerpo: `Estimados padres, estudiantes y encargados:\n\n{{mensaje_director}}\n\nAtentamente,\nDirección de ${INST}`, auto: null },
@@ -63,7 +75,7 @@ const PLANTILLAS = [
 
 // Variables que se completan automáticamente con datos de la base de datos
 const AUTO_VARS = ['nombre_institucion', 'nombre_alumno', 'codigo_alumno', 'nombre_destinatario', 'mes', 'fecha_vencimiento', 'monto', 'concepto',
-  'fecha_pago', 'motivo_rechazo', 'estado_asistencia', 'cantidad_ausencias'];
+  'fecha_pago', 'motivo_rechazo', 'grado', 'estado_asistencia', 'cantidad_ausencias'];
 // Variables que escribe quien envía (si la plantilla las usa)
 const MANUAL_VARS = {
   asunto: 'Asunto', mensaje_director: 'Mensaje', mensaje_personalizado: 'Mensaje', fecha: 'Fecha', hora: 'Hora', lugar: 'Lugar',

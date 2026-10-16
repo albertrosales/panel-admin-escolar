@@ -101,7 +101,9 @@ export const api = {
     me: () => requestPortal('/portal/me'),
     subirComprobante: (imagen, codigo) => requestPortal('/portal-comprobantes', { method: 'POST', body: JSON.stringify({ imagen, codigo }) }),
     verificarCodigo: (codigo) => requestPortal('/portal-comprobantes/codigo/' + encodeURIComponent(codigo)),
-    misComprobantes: () => requestPortal('/portal-comprobantes')
+    misComprobantes: () => requestPortal('/portal-comprobantes'),
+    matricula: () => requestPortal('/portal-matricula'),
+    solicitarMatricula: (data) => requestPortal('/portal-matricula', { method: 'POST', body: JSON.stringify(data) })
   },
   grados: {
     listar: (params) => request('/grados?' + new URLSearchParams(params)),
@@ -151,6 +153,15 @@ export const api = {
     actualizar: (id, data) => request('/comprobantes/' + id, { method: 'PATCH', body: JSON.stringify(data) }),
     aprobar: (id, pago_id) => request('/comprobantes/' + id + '/aprobar', { method: 'POST', body: JSON.stringify({ pago_id }) }),
     rechazar: (id, nota) => request('/comprobantes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ nota }) })
+  },
+  matriculas: {
+    periodos: () => request('/matriculas/periodos'),
+    crearPeriodo: (d) => request('/matriculas/periodos', { method: 'POST', body: JSON.stringify(d) }),
+    editarPeriodo: (id, d) => request('/matriculas/periodos/' + id, { method: 'PUT', body: JSON.stringify(d) }),
+    eliminarPeriodo: (id) => request('/matriculas/periodos/' + id, { method: 'DELETE' }),
+    solicitudes: (q) => request('/matriculas/solicitudes?' + new URLSearchParams(q || {})),
+    aprobar: (id) => request('/matriculas/solicitudes/' + id + '/aprobar', { method: 'POST' }),
+    rechazar: (id, motivo) => request('/matriculas/solicitudes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ motivo }) })
   },
   correos: {
     estado: () => request('/correos/estado'),
