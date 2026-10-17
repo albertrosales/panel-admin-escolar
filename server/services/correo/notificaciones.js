@@ -31,7 +31,7 @@ async function cargarPlantilla(colegioId, clave) {
 /** Datos reales del alumno, su colegio y su situación de pagos/asistencia */
 async function variablesAlumno(alumnoId, { pagoId } = {}) {
   const { rows: [a] } = await pool.query(
-    `SELECT a.*, c.nombre AS institucion, c.correo_color, c.correo_logo_url, c.correo_pie FROM alumnos a JOIN colegios c ON c.id = a.colegio_id WHERE a.id = $1`, [alumnoId]);
+    `SELECT a.*, c.nombre AS institucion, c.correo_color, c.correo_logo_url, c.correo_pie, (c.logo_data IS NOT NULL) AS tiene_logo FROM alumnos a JOIN colegios c ON c.id = a.colegio_id WHERE a.id = $1`, [alumnoId]);
   if (!a) return null;
   const pago = pagoId
     ? (await pool.query('SELECT * FROM pagos WHERE id = $1 AND alumno_id = $2', [pagoId, alumnoId])).rows[0]
@@ -51,7 +51,7 @@ async function variablesAlumno(alumnoId, { pagoId } = {}) {
     cantidad_ausencias: as && as.aus ? String(as.aus) : '', estado_asistencia: as && as.ultimo ? ESTADOS_ASIS[as.ultimo.trim()] : '',
     periodo_academico: String(new Date().getFullYear())
   };
-  return { alumno: a, vars, marca: { institucion: a.institucion, color: a.correo_color, logo: a.correo_logo_url, pie: a.correo_pie } };
+  return { alumno: a, vars, marca: { institucion: a.institucion, color: a.correo_color, logo: a.tiene_logo ? (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'https://panel-admin-escolar.onrender.com') + '/api/marca/' + a.colegio_id + '/logo' : a.correo_logo_url, pie: a.correo_pie } };
 }
 
 function armar(plantilla, ctx, extras) {
@@ -82,6 +82,7 @@ async function auto(clave, alumnoId, referencia, { pagoId, extras } = {}) {
   if (!configurado()) return null;
   const ctx = await variablesAlumno(alumnoId, { pagoId });
   if (!ctx || !ctx.alumno.activo || !ctx.alumno.correo_encargado) return null;
+  if (!(await require('../licencias').moduloActivo(ctx.alumno.colegio_id, 'notificaciones'))) return null;
   const pl = await cargarPlantilla(ctx.alumno.colegio_id, clave);
   if (!pl || !pl.activa) return null;
   if (referencia && await yaEnviado(ctx.alumno.colegio_id, clave, referencia)) return null;

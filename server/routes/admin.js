@@ -32,7 +32,7 @@ router.post('/migrar-campos-perfil', requireSuperAdmin, async (req, res) => {
     `);
     res.json({ mensaje: 'Migración de campos de perfil completada.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -42,7 +42,7 @@ router.post('/migrar-cobros-mensuales', requireSuperAdmin, async (req, res) => {
     await pool.query(`ALTER TABLE colegios ADD COLUMN IF NOT EXISTS dia_pago_mensual INT DEFAULT 5;`);
     res.json({ mensaje: 'Migración de cobros mensuales completada.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -59,7 +59,7 @@ router.post('/mora', async (req, res) => {
     await pool.query('UPDATE colegios SET mora_tipo=$1, mora_valor=$2, mora_dias_gracia=$3 WHERE id=$4', [tipo, valor, dias, req.colegioId]);
     res.json({ mensaje: 'Recargo por mora actualizado.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -82,7 +82,7 @@ router.post('/sincronizar-codigos-moodle', async (req, res) => {
     }
     res.json({ actualizados, compartidos, errores: errores.slice(0, 5), total_errores: errores.length });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -98,7 +98,7 @@ router.post('/cuentas', async (req, res) => {
       [String(req.body.cuentas_destino || '').slice(0, 1000), !!req.body.conciliacion_monto_fecha, req.colegioId]);
     res.json({ mensaje: 'Cuentas del colegio guardadas.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -107,7 +107,7 @@ router.get('/colegios', requireSuperAdmin, async (req, res) => {
     const result = await pool.query('SELECT id, nombre, moodle_url, activo, dia_pago_mensual FROM colegios ORDER BY id');
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -143,7 +143,7 @@ router.post('/registrar-colegio', requireSuperAdmin, async (req, res) => {
     );
     res.status(201).json({ mensaje: 'Colegio registrado', colegio: r.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -169,6 +169,7 @@ router.post('/crear-usuario-admin', requireSuperAdmin, async (req, res) => {
     const colegio = await pool.query('SELECT id FROM colegios WHERE id = $1', [colegioId]);
     if (!colegio.rows[0]) return res.status(400).json({ error: 'Colegio no encontrado' });
 
+    await require('../services/licencias').verificarCupo(colegioId, 'usuarios');
     const hash = await bcrypt.hash(password, 10);
     try {
       const r = await pool.query(
@@ -181,7 +182,7 @@ router.post('/crear-usuario-admin', requireSuperAdmin, async (req, res) => {
       throw err;
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -200,7 +201,7 @@ router.post('/configurar-dia-pago', async (req, res) => {
     if (!result.rows[0]) return res.status(404).json({ error: 'Colegio no encontrado' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -209,7 +210,7 @@ router.post('/generar-cobros-mensuales', async (req, res) => {
     const generados = await generarCobrosMensuales();
     res.json({ mensaje: generados.length + ' cobro(s) generado(s).' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

@@ -155,6 +155,21 @@ export const api = {
     aprobar: (id, pago_id) => request('/comprobantes/' + id + '/aprobar', { method: 'POST', body: JSON.stringify({ pago_id }) }),
     rechazar: (id, nota) => request('/comprobantes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ nota }) })
   },
+  colegio: {
+    contexto: () => request('/colegio/contexto'),
+    guardarMarca: (d) => request('/colegio/marca', { method: 'PUT', body: JSON.stringify(d) })
+  },
+  proveedor: {
+    resumen: () => request('/proveedor/resumen'),
+    colegios: () => request('/proveedor/colegios'),
+    crearColegio: (d) => request('/proveedor/colegios', { method: 'POST', body: JSON.stringify(d) }),
+    editarColegio: (id, d) => request('/proveedor/colegios/' + id, { method: 'PUT', body: JSON.stringify(d) }),
+    extender: (id, dias) => request('/proveedor/colegios/' + id + '/extender', { method: 'POST', body: JSON.stringify({ dias }) }),
+    entrar: (id) => request('/proveedor/colegios/' + id + '/entrar', { method: 'POST' }),
+    planes: () => request('/proveedor/planes'),
+    crearPlan: (d) => request('/proveedor/planes', { method: 'POST', body: JSON.stringify(d) }),
+    editarPlan: (id, d) => request('/proveedor/planes/' + id, { method: 'PUT', body: JSON.stringify(d) })
+  },
   matriculas: {
     periodos: () => request('/matriculas/periodos'),
     crearPeriodo: (d) => request('/matriculas/periodos', { method: 'POST', body: JSON.stringify(d) }),

@@ -263,7 +263,7 @@ function Ajustes({ info, recargar }) {
         <h3>Identidad visual de los correos</h3>
         <form onSubmit={guardar} className="flex flex-col gap-3 max-w-lg">
           <label>Color principal<input type="color" className="w-20 h-10 p-1" value={f.correo_color} onChange={(e) => setF({ ...f, correo_color: e.target.value })} /></label>
-          <label>Logo (enlace https de una imagen, opcional)<input value={f.correo_logo_url} onChange={(e) => setF({ ...f, correo_logo_url: e.target.value })} placeholder="https://..." /></label>
+          <p className="text-xs text-gray-500">El logo y el nombre se cambian en Configuración → Marca de la institución.</p>
           <label>Pie del correo (opcional)<input value={f.correo_pie} onChange={(e) => setF({ ...f, correo_pie: e.target.value })} placeholder="Tocoa, Colón · Tel. ..." /></label>
           <div><button type="submit">Guardar</button></div>
           {msg && <p className="text-sm text-gray-500">{msg}</p>}

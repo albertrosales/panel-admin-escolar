@@ -14,7 +14,7 @@ router.param('id', async (req, res, next, id) => {
     }
     next();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -25,7 +25,7 @@ router.get('/por-codigo/:codigo', async (req, res) => {
     if (!r.rows[0]) return res.status(404).json({ error: 'No existe un alumno con ese código' });
     res.json(r.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -83,7 +83,7 @@ router.get('/:id', async (req, res) => {
       clases: clasesResult.rows
     }));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -94,6 +94,8 @@ router.post('/', async (req, res) => {
     if (!b.nombre_completo) {
       return res.status(400).json({ error: 'nombre_completo es requerido' });
     }
+
+    await require('../services/licencias').verificarCupo(colegioId, 'alumnos');
 
     const colegioResult = await pool.query('SELECT * FROM colegios WHERE id = $1', [colegioId]);
     const colegio = colegioResult.rows[0];
@@ -179,7 +181,7 @@ router.post('/', async (req, res) => {
       erroresMatricula
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -206,7 +208,7 @@ router.patch('/:id', async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -243,7 +245,7 @@ router.post('/:id/dar-de-baja', async (req, res) => {
 
     res.json({ alumno: result.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -256,7 +258,7 @@ router.post('/:id/reactivar', async (req, res) => {
     );
     res.json({ alumno: result.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -296,7 +298,7 @@ router.post('/:id/matricular', async (req, res) => {
 
     res.json({ mensaje: 'Matrícula actualizada', clasesAgregadas: grados.map(g => g.nombre), erroresMatricula });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -305,7 +307,7 @@ router.post('/:id/evaluar-estado', async (req, res) => {
     const resultado = await evaluarEstadoAlumno(req.params.id);
     res.json(resultado);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

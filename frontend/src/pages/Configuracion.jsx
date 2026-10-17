@@ -1,9 +1,67 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import { comprimirImagen } from '../imagen';
 
 const COLEGIO_ID = 1;
 
-export default function Configuracion() {
+function MiPlan({ ctx }) {
+  if (!ctx) return null;
+  const l = ctx.licencia; const lim = ctx.plan.limites;
+  const E = { activa: 'Activa', prueba: 'Prueba gratuita', vencida: 'Vencida', suspendida: 'Suspendida' };
+  return (
+    <div className="card">
+      <h3>Mi plan</h3>
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm mb-3">
+        <p><span className="text-gray-500">Plan:</span> {ctx.plan.nombre || 'Sin plan asignado'}</p>
+        <p><span className="text-gray-500">Licencia:</span> {E[l.estado]}{l.vence ? ' · vence ' + l.vence.slice(8, 10) + '/' + l.vence.slice(5, 7) + '/' + l.vence.slice(0, 4) : ''}</p>
+        <p><span className="text-gray-500">Alumnos:</span> {ctx.uso.alumnos}{lim.alumnos != null ? ' de ' + lim.alumnos : ''}</p>
+        <p><span className="text-gray-500">Usuarios:</span> {ctx.uso.usuarios}{lim.usuarios != null ? ' de ' + lim.usuarios : ''}</p>
+      </div>
+      <p className="text-xs font-medium text-gray-500 mb-1">Módulos</p>
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(ctx.nombres_modulos).map(([k, n]) => <span key={k} className={'badge ' + (ctx.modulos[k] ? 'badge-verde' : '')}>{n}{ctx.modulos[k] ? '' : ' (no incluido)'}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function Marca({ ctx, recargarCtx }) {
+  const [f, setF] = useState({ nombre: ctx.colegio.nombre, color: ctx.colegio.color || '#2455e6', pie: ctx.colegio.pie || '' });
+  const [msg, setMsg] = useState('');
+  async function guardar(e) {
+    e.preventDefault(); setMsg('');
+    try { await api.colegio.guardarMarca(f); setMsg('Guardado.'); recargarCtx(); } catch (err) { setMsg(err.message); }
+  }
+  async function subirLogo(e) {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try {
+      const url = await comprimirImagen(file, 400, 'image/png');
+      await api.colegio.guardarMarca({ logo: url }); setMsg('Logo actualizado.'); recargarCtx();
+    } catch (err) { setMsg(err.message); }
+    e.target.value = '';
+  }
+  async function quitarLogo() { await api.colegio.guardarMarca({ quitar_logo: true }); recargarCtx(); setMsg('Logo quitado.'); }
+  return (
+    <div className="card">
+      <h3>Marca de la institución</h3>
+      <p className="text-sm text-gray-500 mb-3">Nombre, color y logo se usan en el panel, los correos y los boletines.</p>
+      <form onSubmit={guardar} className="flex flex-col gap-3 max-w-lg">
+        <label>Nombre de la institución<input value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} required /></label>
+        <label>Color principal<input type="color" className="w-20 h-10 p-1" value={f.color} onChange={(e) => setF({ ...f, color: e.target.value })} /></label>
+        <label>Pie de los correos (opcional)<input value={f.pie} onChange={(e) => setF({ ...f, pie: e.target.value })} placeholder="Tocoa, Colón · Tel. ..." /></label>
+        <div className="flex items-center gap-3">
+          {ctx.colegio.tiene_logo ? <img src={'/api/marca/' + ctx.colegio.id + '/logo?' + Date.now()} alt="Logo" className="h-12 w-auto border border-gray-200 rounded-lg p-1" /> : <span className="text-sm text-gray-500">Sin logo</span>}
+          <label className="!flex-row items-center gap-2"><span className="underline cursor-pointer text-blue-600">Subir logo (PNG o JPG)</span><input type="file" accept="image/png,image/jpeg" className="hidden" onChange={subirLogo} /></label>
+          {ctx.colegio.tiene_logo && <button type="button" className="secondary" onClick={quitarLogo}>Quitar</button>}
+        </div>
+        <div><button type="submit">Guardar</button></div>
+        {msg && <p className="text-sm text-gray-500">{msg}</p>}
+      </form>
+    </div>
+  );
+}
+
+export default function Configuracion({ ctx, recargarCtx }) {
   const [dia, setDia] = useState(5);
   const [guardando, setGuardando] = useState(false);
   const [generando, setGenerando] = useState(false);
@@ -61,7 +119,9 @@ export default function Configuracion() {
 
   return (
     <div>
-      <h2>Configuración de cobros</h2>
+      <h2>Configuración</h2>
+      {ctx && <MiPlan ctx={ctx} />}
+      {ctx && <Marca ctx={ctx} recargarCtx={recargarCtx} />}
 
       <div className="card">
         <h3>Día de vencimiento mensual</h3>

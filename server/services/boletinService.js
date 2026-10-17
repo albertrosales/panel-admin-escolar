@@ -2,6 +2,7 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const fs = require('fs');
 const path = require('path');
 const pool = require('../db');
+const { marcaColegio, dibujarLogo } = require('./marca');
 
 const OUT = path.join(__dirname, '..', '..', 'generated-pdfs');
 if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
@@ -16,10 +17,12 @@ async function generarBoletin(alumnoId, colegioId, notas) {
   const page = doc.addPage([612, 792]);
   const f = await doc.embedFont(StandardFonts.Helvetica);
   const b = await doc.embedFont(StandardFonts.HelveticaBold);
-  const ink = rgb(0.12, 0.13, 0.16), dim = rgb(0.42, 0.44, 0.49), blue = rgb(0.14, 0.33, 0.9);
+  const marca = await marcaColegio(colegioId);
+  const ink = rgb(0.12, 0.13, 0.16), dim = rgb(0.42, 0.44, 0.49), blue = marca.color;
   const t = (s, x, y, size, font, color) => page.drawText(String(s), { x, y, size, font: font || f, color: color || ink });
 
-  t(a.colegio, 60, 730, 18, b);
+  const lw = await dibujarLogo(doc, page, marca, 60, 718, 46);
+  t(a.colegio, 60 + (lw ? lw + 12 : 0), 730, 18, b);
   t('BOLETÍN DE CALIFICACIONES', 60, 708, 11, b, dim);
   t('Alumno: ' + a.nombre_completo, 60, 670, 12, b);
   t('Fecha: ' + new Date().toLocaleDateString('es-HN', { day: 'numeric', month: 'long', year: 'numeric' }), 60, 652, 10, f, dim);

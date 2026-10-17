@@ -21,6 +21,9 @@ const comprobantesPortalRoutes = require('./routes/comprobantesPortal');
 const requirePortal = require('./middleware/portalAuth');
 const conciliacionRoutes = require('./routes/conciliacion');
 const correosRoutes = require('./routes/correos');
+const colegioRoutes = require('./routes/colegio');
+const proveedorRoutes = require('./routes/proveedor');
+const licencias = require('./services/licencias');
 const matriculasRoutes = require('./routes/matriculas');
 const matriculaPortalRoutes = require('./routes/matriculaPortal');
 const notif = require('./services/correo/notificaciones');
@@ -60,9 +63,11 @@ async function verificarPropiedadReportes(req, res, next) {
   }
 }
 
+app.get('/api/marca/:id/logo', colegioRoutes.logoPublico);
+app.use('/api', licencias.guard);
 app.use('/api/auth', authRoutes);
 app.use('/api/portal', portalRoutes);
-app.use('/api/portal-comprobantes', requirePortal, comprobantesPortalRoutes);
+app.use('/api/portal-comprobantes', requirePortal, licencias.requireModulo('comprobantes'), comprobantesPortalRoutes);
 
 app.use('/api/alumnos', requireAuth, alumnosRoutes);
 app.use('/api/profesores', requireAuth, profesoresRoutes);
@@ -72,13 +77,15 @@ app.use('/api/grados', requireAuth, gradosRoutes);
 app.use('/api/admin', requireAuth, adminRoutes);
 app.use('/api/estadisticas', requireAuth, estadisticasRoutes);
 app.use('/api/calendario', requireAuth, calendarioRoutes);
-app.use('/api/matriculas', requireAuth, matriculasRoutes);
-app.use('/api/portal-matricula', requirePortal, matriculaPortalRoutes);
-app.use('/api/asistencia', requireAuth, asistenciaRoutes);
+app.use('/api/colegio', requireAuth, colegioRoutes);
+app.use('/api/proveedor', requireAuth, proveedorRoutes);
+app.use('/api/matriculas', requireAuth, licencias.requireModulo('matricula'), matriculasRoutes);
+app.use('/api/portal-matricula', requirePortal, licencias.requireModulo('matricula'), matriculaPortalRoutes);
+app.use('/api/asistencia', requireAuth, licencias.requireModulo('asistencia'), asistenciaRoutes);
 app.use('/api/notas', requireAuth, notasRoutes);
-app.use('/api/comprobantes', requireAuth, comprobantesRoutes);
-app.use('/api/correos', requireAuth, correosRoutes);
-app.use('/api/conciliacion', requireAuth, conciliacionRoutes);
+app.use('/api/comprobantes', requireAuth, licencias.requireModulo('comprobantes'), comprobantesRoutes);
+app.use('/api/correos', requireAuth, licencias.requireModulo('notificaciones'), correosRoutes);
+app.use('/api/conciliacion', requireAuth, licencias.requireModulo('conciliacion'), conciliacionRoutes);
 
 cron.schedule('0 6 * * *', () => {
   revisarPagos().catch(err => console.error('Error en cron de pagos:', err));

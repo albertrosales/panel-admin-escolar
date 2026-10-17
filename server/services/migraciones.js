@@ -200,4 +200,40 @@ module.exports = async function migrar() {
       FROM (SELECT id, regexp_match(nombre, '(\\d+)\\S*\\s+[Gg]rado\\s+"?([A-Za-z])"?\\s*$') AS m FROM grados) x
       WHERE x.id = g.id AND x.m IS NOT NULL`);
   }
+  // ----- Plataforma multi-institución: planes, licencias, módulos y marca -----
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS planes (
+      id SERIAL PRIMARY KEY,
+      clave VARCHAR(30) UNIQUE NOT NULL,
+      nombre VARCHAR(60) NOT NULL,
+      precio_mensual NUMERIC(10,2),
+      max_alumnos INT,
+      max_usuarios INT,
+      dias_prueba INT,
+      modulos JSONB NOT NULL DEFAULT '{}',
+      activo BOOLEAN DEFAULT TRUE,
+      orden INT DEFAULT 0
+    );
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS plan_id INT REFERENCES planes(id);
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS licencia_estado VARCHAR(12) NOT NULL DEFAULT 'activa';
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS licencia_inicio DATE;
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS licencia_vence DATE;
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS modulos JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS limite_alumnos INT;
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS limite_usuarios INT;
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS notas_proveedor TEXT;
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS logo_data BYTEA;
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS logo_tipo VARCHAR(40);
+  `);
+  const { rows: [np] } = await pool.query('SELECT COUNT(*)::int n FROM planes');
+  if (!np.n) {
+    const todos = { comprobantes: true, conciliacion: true, asistencia: true, notificaciones: true, matricula: true, importacion: true };
+    const ninguno = { comprobantes: false, conciliacion: false, asistencia: false, notificaciones: false, matricula: false, importacion: false };
+    const plan = (clave, nombre, ma, mu, dias, modulos, orden) =>
+      pool.query('INSERT INTO planes (clave, nombre, max_alumnos, max_usuarios, dias_prueba, modulos, orden) VALUES ($1,$2,$3,$4,$5,$6,$7)', [clave, nombre, ma, mu, dias, modulos, orden]);
+    await plan('prueba', 'Prueba gratuita', 30, 2, 30, todos, 0);
+    await plan('basico', 'Básico', 150, 3, null, { ...ninguno, comprobantes: true, importacion: true }, 1);
+    await plan('estandar', 'Estándar', 400, 6, null, { ...todos, conciliacion: false }, 2);
+    await plan('completo', 'Completo', null, null, null, todos, 3);
+  }
 };
