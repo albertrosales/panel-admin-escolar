@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, guardarSesion, obtenerUsuario } from '../api';
+import { api, guardarSesion, obtenerUsuario, descargarRespaldo } from '../api';
 
 const ESTADO = { activa: ['Activa', 'badge-verde'], prueba: ['Prueba', 'badge-amarillo'], vencida: ['Vencida', 'badge-rojo'], suspendida: ['Suspendida', 'badge-rojo'] };
 const MODULOS = { comprobantes: 'Comprobantes de pago', conciliacion: 'Estado de cuenta bancario', asistencia: 'Asistencia', notificaciones: 'Notificaciones por correo', matricula: 'Matrícula en línea', importacion: 'Importación desde Excel' };
@@ -218,6 +218,28 @@ function Planes({ planes, recargar }) {
   );
 }
 
+function Respaldos() {
+  const [lista, setLista] = useState([]);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { api.proveedor.colegios().then(setLista).catch(() => {}); }, []);
+  async function bajar(id) {
+    setMsg('Preparando copia...');
+    try { await descargarRespaldo(id); setMsg('Copia descargada.'); } catch (e) { setMsg(e.message); }
+  }
+  return (
+    <div className="card">
+      <h3>Copias de seguridad</h3>
+      <p className="text-sm text-gray-500 mb-3">El archivo incluye los datos del colegio sin fotos de comprobantes ni el token de Moodle. Si configuras <code>BACKUP_EMAIL</code> en Render, cada domingo se envía una copia de cada colegio a ese correo.
+        Para recuperar registros borrados: <code>node server/scripts/restaurar.js archivo.json.gz [id_colegio] --simular</code> (quita --simular para aplicar).</p>
+      <div className="flex flex-col gap-2">
+        <div><button onClick={() => bajar('todos')}>Descargar todos los colegios</button></div>
+        {lista.map((c) => <div key={c.id} className="flex items-center gap-3 text-sm"><span className="w-60">{c.nombre}</span><button className="secondary" onClick={() => bajar(c.id)}>Descargar</button></div>)}
+      </div>
+      {msg && <p className="text-sm text-gray-500 mt-2">{msg}</p>}
+    </div>
+  );
+}
+
 export default function Proveedor() {
   const [tab, setTab] = useState('colegios');
   const [planes, setPlanes] = useState([]);
@@ -228,10 +250,11 @@ export default function Proveedor() {
       <h2>Panel del proveedor</h2>
       <Resumen />
       <div className="flex gap-2 mb-4">
-        {[['colegios', 'Colegios'], ['planes', 'Planes']].map(([k, n]) => <button key={k} className={tab === k ? '' : 'secondary'} onClick={() => setTab(k)}>{n}</button>)}
+        {[['colegios', 'Colegios'], ['planes', 'Planes'], ['respaldos', 'Respaldos']].map(([k, n]) => <button key={k} className={tab === k ? '' : 'secondary'} onClick={() => setTab(k)}>{n}</button>)}
       </div>
       {tab === 'colegios' && <Colegios planes={planes} />}
       {tab === 'planes' && <Planes planes={planes} recargar={cargarPlanes} />}
+      {tab === 'respaldos' && <Respaldos />}
     </div>
   );
 }

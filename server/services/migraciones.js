@@ -236,4 +236,51 @@ module.exports = async function migrar() {
     await plan('estandar', 'Estándar', 400, 6, null, { ...todos, conciliacion: false }, 2);
     await plan('completo', 'Completo', null, null, null, todos, 3);
   }
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS auditoria (
+      id BIGSERIAL PRIMARY KEY,
+      colegio_id INT,
+      usuario_id INT,
+      usuario VARCHAR(150),
+      rol VARCHAR(20),
+      soporte BOOLEAN DEFAULT FALSE,
+      accion VARCHAR(200),
+      metodo VARCHAR(8),
+      ruta VARCHAR(250),
+      entidad VARCHAR(40),
+      entidad_id VARCHAR(40),
+      detalle JSONB,
+      ip VARCHAR(60),
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_auditoria_colegio ON auditoria(colegio_id, creado_en DESC);
+    CREATE TABLE IF NOT EXISTS tickets_soporte (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT REFERENCES colegios(id) ON DELETE CASCADE,
+      usuario VARCHAR(150),
+      asunto VARCHAR(200) NOT NULL,
+      categoria VARCHAR(20) DEFAULT 'consulta',
+      prioridad VARCHAR(10) DEFAULT 'normal',
+      estado VARCHAR(12) DEFAULT 'abierto',
+      creado_en TIMESTAMP DEFAULT NOW(),
+      actualizado_en TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS tickets_mensajes (
+      id SERIAL PRIMARY KEY,
+      ticket_id INT REFERENCES tickets_soporte(id) ON DELETE CASCADE,
+      autor_tipo VARCHAR(10) NOT NULL,
+      autor VARCHAR(150),
+      mensaje TEXT NOT NULL,
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS respaldos (
+      id SERIAL PRIMARY KEY,
+      colegio_id INT,
+      tipo VARCHAR(12),
+      bytes INT,
+      estado VARCHAR(10),
+      error VARCHAR(300),
+      creado_en TIMESTAMP DEFAULT NOW()
+    );
+  `);
 };

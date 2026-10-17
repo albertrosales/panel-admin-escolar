@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { api, descargarRespaldo } from '../api';
 import { comprimirImagen } from '../imagen';
 
 const COLEGIO_ID = 1;
@@ -21,6 +21,30 @@ function MiPlan({ ctx }) {
       <div className="flex flex-wrap gap-2">
         {Object.entries(ctx.nombres_modulos).map(([k, n]) => <span key={k} className={'badge ' + (ctx.modulos[k] ? 'badge-verde' : '')}>{n}{ctx.modulos[k] ? '' : ' (no incluido)'}</span>)}
       </div>
+    </div>
+  );
+}
+
+function Respaldos() {
+  const [d, setD] = useState({ respaldos: [], automatico: false });
+  const [msg, setMsg] = useState('');
+  const cargar = () => api.respaldos.listar().then(setD).catch(() => {});
+  useEffect(() => { cargar(); }, []);
+  async function bajar() {
+    setMsg('Preparando copia...');
+    try { await descargarRespaldo(); setMsg('Copia descargada. Guárdala en un lugar seguro: contiene datos personales.'); cargar(); } catch (e) { setMsg(e.message); }
+  }
+  const ult = d.respaldos.find((r) => r.estado === 'ok');
+  return (
+    <div className="card">
+      <h3>Copias de seguridad</h3>
+      <p className="text-sm text-gray-500 mb-3">Descarga un archivo con todos los datos de tu institución (alumnos, pagos, asistencia, matrículas, etc.). Sirve para recuperar información borrada por error.
+        {d.automatico ? ' Además se envía una copia semanal por correo al proveedor.' : ''}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button onClick={bajar}>Descargar copia de seguridad</button>
+        {ult && <span className="text-xs text-gray-500">Última: {new Date(ult.creado_en).toLocaleString('es-HN')} ({ult.tipo})</span>}
+      </div>
+      {msg && <p className="text-sm text-gray-500 mt-2">{msg}</p>}
     </div>
   );
 }
@@ -122,6 +146,7 @@ export default function Configuracion({ ctx, recargarCtx }) {
       <h2>Configuración</h2>
       {ctx && <MiPlan ctx={ctx} />}
       {ctx && <Marca ctx={ctx} recargarCtx={recargarCtx} />}
+      <Respaldos />
 
       <div className="card">
         <h3>Día de vencimiento mensual</h3>

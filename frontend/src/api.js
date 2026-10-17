@@ -91,6 +91,16 @@ export async function imagenComprobante(id) {
   return URL.createObjectURL(await res.blob());
 }
 
+// Descarga una copia de seguridad (archivo comprimido) con la sesión actual
+export async function descargarRespaldo(colegioId) {
+  const res = await fetch(BASE + '/respaldos/exportar' + (colegioId ? '?colegio_id=' + colegioId : ''), { headers: { Authorization: 'Bearer ' + getToken() } });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'No se pudo descargar');
+  const m = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '');
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a'); a.href = url; a.download = m ? m[1] : 'respaldo.json.gz'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 export const api = {
   auth: {
     login: (correo, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) })
@@ -154,6 +164,17 @@ export const api = {
     actualizar: (id, data) => request('/comprobantes/' + id, { method: 'PATCH', body: JSON.stringify(data) }),
     aprobar: (id, pago_id) => request('/comprobantes/' + id + '/aprobar', { method: 'POST', body: JSON.stringify({ pago_id }) }),
     rechazar: (id, nota) => request('/comprobantes/' + id + '/rechazar', { method: 'POST', body: JSON.stringify({ nota }) })
+  },
+  soporte: {
+    listar: (q) => request('/soporte?' + new URLSearchParams(q || {})),
+    crear: (d) => request('/soporte', { method: 'POST', body: JSON.stringify(d) }),
+    ver: (id) => request('/soporte/' + id),
+    responder: (id, mensaje) => request('/soporte/' + id + '/mensajes', { method: 'POST', body: JSON.stringify({ mensaje }) }),
+    estado: (id, estado) => request('/soporte/' + id, { method: 'PATCH', body: JSON.stringify({ estado }) })
+  },
+  auditoria: (q) => request('/auditoria?' + new URLSearchParams(q || {})),
+  respaldos: {
+    listar: () => request('/respaldos')
   },
   colegio: {
     contexto: () => request('/colegio/contexto'),

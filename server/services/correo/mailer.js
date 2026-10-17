@@ -19,19 +19,22 @@ const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 const wrap = (s) => s.replace(/(.{76})/g, '$1\r\n');
 const encabezado = (s) => '=?UTF-8?B?' + b64(String(s).replace(/[\r\n]+/g, ' ')) + '?=';
 
-function construirMensaje({ nombreRemitente, to, asunto, html, texto }) {
+function construirMensaje({ nombreRemitente, to, asunto, html, texto, adjuntos }) {
   const lim = 'b_' + Math.random().toString(36).slice(2);
   const limpio = (s) => String(s).replace(/[\r\n<>]/g, '');
-  return [
-    `From: ${encabezado(nombreRemitente || 'Notificaciones')} <${limpio(remitente())}>`,
-    `To: ${limpio(to)}`,
-    `Subject: ${encabezado(asunto)}`,
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/alternative; boundary="${lim}"`, '',
+  const alt = [
     `--${lim}`, 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', wrap(b64(texto)),
     `--${lim}`, 'Content-Type: text/html; charset="UTF-8"', 'Content-Transfer-Encoding: base64', '', wrap(b64(html)),
-    `--${lim}--`, ''
+    `--${lim}--`
   ].join('\r\n');
+  const cab = [`From: ${encabezado(nombreRemitente || 'Notificaciones')} <${limpio(remitente())}>`, `To: ${limpio(to)}`, `Subject: ${encabezado(asunto)}`, 'MIME-Version: 1.0'];
+  if (!adjuntos || !adjuntos.length) return [...cab, `Content-Type: multipart/alternative; boundary="${lim}"`, '', alt, ''].join('\r\n');
+  const mix = 'm_' + Math.random().toString(36).slice(2);
+  const partes = adjuntos.map((a) => [
+    `--${mix}`, `Content-Type: ${a.tipo || 'application/octet-stream'}; name="${limpio(a.nombre)}"`, 'Content-Transfer-Encoding: base64',
+    `Content-Disposition: attachment; filename="${limpio(a.nombre)}"`, '', wrap(a.buffer.toString('base64'))
+  ].join('\r\n'));
+  return [...cab, `Content-Type: multipart/mixed; boundary="${mix}"`, '', `--${mix}`, `Content-Type: multipart/alternative; boundary="${lim}"`, '', alt, ...partes, `--${mix}--`, ''].join('\r\n');
 }
 
 async function enviar(msg) {

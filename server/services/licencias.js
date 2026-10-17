@@ -66,6 +66,7 @@ async function guard(req, res, next) {
     if (!h || h.indexOf('Bearer ') !== 0) return next();
     let p;
     try { p = jwt.verify(h.slice(7), process.env.JWT_SECRET); } catch (e) { return next(); }
+    req.jwt = p;
     const cid = Number(p.colegio_id);
     if (!cid || p.soporte || esProveedor(p) || EXENTO.test(req.path)) return next();
     const c = await cargarColegio(cid);

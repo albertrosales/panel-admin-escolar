@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, Building2 } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, Building2, LifeBuoy, ScrollText } from 'lucide-react';
 import { api, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
 import Login from './pages/Login';
 import PortalLogin from './pages/PortalLogin';
@@ -19,6 +19,8 @@ import Conciliacion from './pages/Conciliacion';
 import Notificaciones from './pages/Notificaciones';
 import Matricula from './pages/Matricula';
 import Asistencia from './pages/Asistencia';
+import Soporte from './pages/Soporte';
+import Auditoria from './pages/Auditoria';
 import Proveedor from './pages/Proveedor';
 import Calendario from './components/Calendario';
 
@@ -43,6 +45,8 @@ const NAV = [
   { to: '/notificaciones', label: 'Notificaciones', icon: Mail, modulo: 'notificaciones' },
   { to: '/asistencia', label: 'Asistencia', icon: ClipboardCheck, modulo: 'asistencia' },
   { to: '/usuarios/nuevo', label: 'Nuevo usuario', icon: UserPlus },
+  { to: '/auditoria', label: 'Auditoría', icon: ScrollText, roles: ['admin', 'director', 'superadmin'] },
+  { to: '/soporte', label: 'Soporte', icon: LifeBuoy },
   { to: '/configuracion', label: 'Configuración', icon: Settings },
   { to: '/proveedor', label: 'Proveedor', icon: Building2, soloProveedor: true }
 ];
@@ -84,7 +88,7 @@ function Panel() {
   function salir() { cerrarSesion(); window.location.href = '/login'; }
 
   const color = ctx && ctx.colegio.color;
-  const items = NAV.filter((n) => (!n.modulo || !ctx || ctx.modulos[n.modulo] !== false) && (!n.soloProveedor || (ctx && ctx.es_proveedor)));
+  const items = NAV.filter((n) => (!n.modulo || !ctx || ctx.modulos[n.modulo] !== false) && (!n.soloProveedor || (ctx && ctx.es_proveedor)) && (!n.roles || (usuario && n.roles.includes(usuario.rol))));
   const suspendida = ctx && ctx.licencia.estado === 'suspendida' && !ctx.soporte && !ctx.es_proveedor;
 
   return (
@@ -132,6 +136,8 @@ function Panel() {
             <Route path="/matricula" element={<Matricula />} />
             <Route path="/notificaciones" element={<Notificaciones />} />
             <Route path="/asistencia" element={<Asistencia />} />
+            <Route path="/auditoria" element={<Auditoria />} />
+            <Route path="/soporte" element={<Soporte esProveedor={!!(ctx && ctx.es_proveedor)} />} />
             <Route path="/configuracion" element={<Configuracion ctx={ctx} recargarCtx={cargarCtx} />} />
             <Route path="/proveedor" element={ctx && ctx.es_proveedor ? <Proveedor /> : <Navigate to="/" replace />} />
           </Routes>
