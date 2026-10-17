@@ -19,7 +19,7 @@ function Config() {
         <label>Modalidad<input value={f.sace_modalidad} onChange={set('sace_modalidad')} placeholder="TERCER CICLO DE EDUCACIÓN BÁSICA" /></label>
         <label>Jornada<input value={f.sace_jornada} onChange={set('sace_jornada')} placeholder="MATUTINA" /></label>
       </div>
-      <p className="text-xs text-gray-500 mt-3">{gp ? 'Se usa tu plantilla oficial de Google Sheets (se descarga como .xlsx).' : 'Plantilla de Google Sheets no configurada: se genera un .xls básico.'}</p>
+      <p className="text-xs text-gray-500 mt-3">{gp ? 'Se usa tu plantilla oficial de Google Sheets (se descarga como Excel .xlsx).' : 'Plantilla de Google Sheets no configurada: se genera un .xls básico.'}</p>
       <div className="flex items-center gap-3 mt-3"><button type="submit">Guardar</button>{msg && <span className="text-sm text-gray-500">{msg}</span>}</div>
     </form>
   );

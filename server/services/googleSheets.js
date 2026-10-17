@@ -21,7 +21,7 @@ async function token() {
   if (cache.token && Date.now() < cache.exp) return cache.token;
   const c = credenciales();
   const ahora = Math.floor(Date.now() / 1000);
-  const assertion = jwt.sign({ iss: c.client_email, scope: 'https://www.googleapis.com/auth/drive', aud: 'https://oauth2.googleapis.com/token', iat: ahora, exp: ahora + 3600 }, c.private_key, { algorithm: 'RS256' });
+  const assertion = jwt.sign({ iss: c.client_email, scope: 'https://www.googleapis.com/auth/drive.readonly', aud: 'https://oauth2.googleapis.com/token', iat: ahora, exp: ahora + 3600 }, c.private_key, { algorithm: 'RS256' });
   const r = await axios.post('https://oauth2.googleapis.com/token', new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
   cache = { token: r.data.access_token, exp: Date.now() + (r.data.expires_in - 120) * 1000 };
   return cache.token;
@@ -42,50 +42,47 @@ async function g(method, url, data, extra) {
 const col = (n) => String.fromCharCode(65 + n);
 
 async function llenar({ encabezado: e, alumnos }) {
+  const ExcelJS = require('exceljs');
   const ID = process.env.SACE_PLANTILLA_ID;
-  const meta = await g('get', `https://www.googleapis.com/drive/v3/files/${ID}?fields=id,mimeType,name&supportsAllDrives=true`);
-  if (meta.mimeType !== SHEET_MIME) { const er = new Error('La plantilla SACE debe ser una hoja de Google (en Drive: Abrir con → Hojas de cálculo de Google → Archivo → Guardar como hoja de Google).'); er.status = 400; throw er; }
-  const copia = await g('post', `https://www.googleapis.com/drive/v3/files/${ID}/copy?supportsAllDrives=true`, { name: 'SACE temporal ' + Date.now() });
-  try {
-    const S = `https://sheets.googleapis.com/v4/spreadsheets/${copia.id}`;
-    const info = await g('get', S + '?fields=sheets.properties');
-    const hoja = info.sheets[0].properties; const nombre = hoja.title.replace(/'/g, "''");
-    const leer = async () => (await g('get', `${S}/values/${encodeURIComponent("'" + nombre + "'!A1:M400")}`)).values || [];
-    let vals = await leer();
-    const celda = (r, c) => String((vals[r] && vals[r][c]) || '');
-    const iInas = vals.findIndex((_, r) => celda(r, 3).toUpperCase().includes('INASISTENCIAS'));
-    const iFin = vals.findIndex((_, r) => celda(r, 0).includes('Fin del documento'));
-    if (iInas < 0 || iFin < 0 || iFin <= iInas + 1) { const er = new Error('No reconozco la plantilla: debe tener la fila de "INASISTENCIAS", al menos una fila de alumno y la línea "Fin del documento".'); er.status = 400; throw er; }
-    const ini = iInas + 1, existentes = iFin - ini, n = alumnos.length;
-    const reqs = [];
-    if (n > existentes) reqs.push({ insertDimension: { range: { sheetId: hoja.sheetId, dimension: 'ROWS', startIndex: iFin, endIndex: iFin + (n - existentes) }, inheritFromBefore: true } });
-    if (n < existentes && n >= 1) reqs.push({ deleteDimension: { range: { sheetId: hoja.sheetId, dimension: 'ROWS', startIndex: ini + n, endIndex: iFin } } });
-    if (reqs.length) await g('post', S + ':batchUpdate', { requests: reqs });
-
-    const q = (a) => `'${nombre}'!${a}`;
-    const data = [
-      { range: q('A1'), values: [[e.centro || '']] },
-      { range: q('A2'), values: [['MODALIDAD: ' + (e.modalidad || '')]] },
-      { range: q('A3'), values: [[e.grado || '']] },
-      { range: q('A4'), values: [['JORNADA ' + (e.jornada || '')]] },
-      { range: q('A5'), values: [['ASIGNATURA ' + (e.asignatura || '')]] }
-    ];
-    if (n) {
-      const filas = alumnos.map((a) => {
-        const f = [a.documento || 'HND', String(a.identidad || ''), a.nombre];
-        for (let i = 0; i < 4; i++) { const p = (a.p || [])[i] || {}; f.push(p.inas === '' || p.inas == null ? '' : Number(p.inas), p.nota === '' || p.nota == null ? '' : Number(p.nota)); }
-        f.push('', ''); // recuperación
-        return f;
-      });
-      data.push({ range: q(`A${ini + 1}:${col(12)}${ini + n}`), values: filas });
-    }
-    // Identidad como texto para no perder el cero inicial
-    if (n) await g('post', S + ':batchUpdate', { requests: [{ repeatCell: { range: { sheetId: hoja.sheetId, startRowIndex: ini, endRowIndex: ini + n, startColumnIndex: 1, endColumnIndex: 2 }, cell: { userEnteredFormat: { numberFormat: { type: 'TEXT' } } }, fields: 'userEnteredFormat.numberFormat' } }] });
-    await g('post', `${S}/values:batchUpdate`, { valueInputOption: 'RAW', data });
-    return await g('get', `https://www.googleapis.com/drive/v3/files/${copia.id}/export?mimeType=${encodeURIComponent(XLSX_MIME)}`, null, { responseType: 'arraybuffer' }).then((b) => Buffer.from(b));
-  } finally {
-    await g('delete', `https://www.googleapis.com/drive/v3/files/${copia.id}?supportsAllDrives=true`).catch(() => {});
+  const meta = await g('get', `https://www.googleapis.com/drive/v3/files/${ID}?fields=id,mimeType&supportsAllDrives=true`);
+  if (meta.mimeType !== SHEET_MIME) { const er = new Error('La plantilla SACE debe ser una hoja de Google (en Drive: Archivo → Guardar como hoja de Google).'); er.status = 400; throw er; }
+  // Se descarga la plantilla (solo lectura) y se llena en el servidor: no se crea nada en Drive
+  const bin = await g('get', `https://www.googleapis.com/drive/v3/files/${ID}/export?mimeType=${encodeURIComponent(XLSX_MIME)}`, null, { responseType: 'arraybuffer' });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(Buffer.from(bin));
+  const ws = wb.worksheets[0];
+  const NC = 15;
+  const texto = (r, c) => { const v = ws.getRow(r).getCell(c).value; return v == null ? '' : (typeof v === 'object' ? (v.richText ? v.richText.map((x) => x.text).join('') : String(v.result || v.text || '')) : String(v)); };
+  let rInas = 0, rFin = 0;
+  for (let r = 1; r <= ws.rowCount; r++) {
+    if (!rInas && texto(r, 4).toUpperCase().includes('INASISTENCIAS')) rInas = r;
+    if (!rFin && texto(r, 1).includes('Fin del documento')) rFin = r;
   }
+  if (!rInas || !rFin || rFin <= rInas + 1) { const er = new Error('No reconozco la plantilla: debe tener la fila de "INASISTENCIAS", al menos una fila de alumno y la línea "Fin del documento".'); er.status = 400; throw er; }
+
+  const ini = rInas + 1, ultimo = ws.rowCount, n = alumnos.length;
+  const copiar = (r) => ({ h: ws.getRow(r).height, celdas: Array.from({ length: NC }, (_, i) => { const c = ws.getRow(r).getCell(i + 1); return { v: c.value, s: c.style ? JSON.parse(JSON.stringify(c.style)) : {} }; }) });
+  const molde = copiar(ini);
+  const cola = []; for (let r = rFin; r <= ultimo; r++) cola.push(copiar(r));
+  for (let r = rFin; r <= ultimo; r++) { try { ws.unMergeCells(r, 1, r, NC); } catch { /* sin combinar */ } }
+  const limite = Math.max(ultimo, ini + n + cola.length);
+  for (let r = ini; r <= limite; r++) for (let c = 1; c <= NC; c++) { const cell = ws.getRow(r).getCell(c); cell.value = null; cell.style = {}; }
+
+  const ponerFila = (r, mold, valores) => { const row = ws.getRow(r); if (mold.h) row.height = mold.h; mold.celdas.forEach((x, i) => { const c = row.getCell(i + 1); c.style = JSON.parse(JSON.stringify(x.s)); c.value = valores ? (valores[i] === undefined ? null : valores[i]) : x.v; }); row.commit && row.commit(); };
+  alumnos.forEach((a, i) => {
+    const f = [a.documento || 'HND', String(a.identidad || ''), a.nombre];
+    for (let k = 0; k < 4; k++) { const p = (a.p || [])[k] || {}; f.push(p.inas === '' || p.inas == null ? null : Number(p.inas), p.nota === '' || p.nota == null ? null : Number(p.nota)); }
+    ponerFila(ini + i, molde, f);
+  });
+  cola.forEach((m, i) => { const r = ini + n + i; ponerFila(r, m, null); ws.mergeCells(r, 1, r, NC); });
+
+  const poner = (r, v) => { ws.getRow(r).getCell(1).value = v; };
+  poner(1, e.centro || '');
+  poner(2, 'MODALIDAD: ' + (e.modalidad || ''));
+  poner(3, e.grado || '');
+  poner(4, 'JORNADA ' + (e.jornada || ''));
+  poner(5, 'ASIGNATURA ' + (e.asignatura || ''));
+  return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
 module.exports = { configurado, llenar, XLSX_MIME };

@@ -65,7 +65,7 @@ function Clase({ c, A, onGuardado }) {
               </tbody>
             </table>
           </div>
-          <div className="mt-3"><button onClick={() => A.descargar(c.id, datos).catch((e) => setMsg(e.message))}>Descargar Excel (.xls)</button></div>
+          <div className="mt-3"><button onClick={() => A.descargar(c.id, datos).catch((e) => setMsg(e.message))}>Descargar Excel</button></div>
         </div>
       )}
     </div>
