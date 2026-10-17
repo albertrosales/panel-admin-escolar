@@ -4,7 +4,8 @@ const pool = require('../db');
 const R = require('../services/respaldo');
 const { esProveedor } = require('../services/licencias');
 
-const permitido = (u) => ['admin', 'director', 'superadmin'].includes(u.rol);
+// Las copias de seguridad son exclusivas del proveedor; un colegio que quiera sus datos lo negocia con él
+const permitido = (u) => esProveedor(u);
 
 router.get('/', async (req, res) => {
   try {
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
 // Descarga la copia de seguridad. El proveedor puede pedir cualquier colegio o todos; los demás, solo el suyo.
 router.get('/exportar', async (req, res) => {
   try {
-    if (!permitido(req.usuario)) return res.status(403).json({ error: 'Solo dirección o administración puede descargar copias de seguridad' });
+    if (!permitido(req.usuario)) return res.status(403).json({ error: 'Las copias de seguridad las gestiona el proveedor' });
     const prov = esProveedor(req.usuario);
     let id = req.colegioId;
     if (prov && req.query.colegio_id === 'todos') id = null;
