@@ -81,7 +81,7 @@ export default function SacePanel({ portal }) {
   if (!clases) return <p className="text-sm text-gray-500">{msg || 'Cargando...'}</p>;
   return (
     <div>
-      {clases.length === 0 && <div className="card"><p className="text-sm text-gray-500">No hay clases con docente asignado.</p></div>}
+      {clases.length === 0 && <div className="card"><p className="text-sm text-gray-500">Aún no hay clases creadas.</p></div>}
       {clases.map((c) => <Clase key={c.id} c={c} A={A} onGuardado={cargar} />)}
     </div>
   );

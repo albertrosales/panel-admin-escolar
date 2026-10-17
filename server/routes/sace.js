@@ -29,7 +29,7 @@ module.exports = function (modo) {
       const { rows } = await pool.query(
         `SELECT g.id, g.nombre, g.seccion, pgm.materia, p.nombre_completo AS profesor,
            COALESCE((SELECT json_agg(json_build_object('parcial', s.parcial, 'inicio', s.inicio::text, 'fin', s.fin::text) ORDER BY s.parcial) FROM sace_parciales s WHERE s.grado_id=g.id), '[]') AS parciales
-         FROM grados g JOIN profesor_grado_materia pgm ON pgm.grado_id=g.id JOIN profesores p ON p.id=pgm.profesor_id
+         FROM grados g LEFT JOIN profesor_grado_materia pgm ON pgm.grado_id=g.id LEFT JOIN profesores p ON p.id=pgm.profesor_id
          WHERE g.colegio_id=$1 ${filtro} ORDER BY g.seccion NULLS LAST, g.nombre`, args);
       res.json(rows);
     } catch (e) { fallo(res, e); }
