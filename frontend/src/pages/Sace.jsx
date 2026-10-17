@@ -6,7 +6,8 @@ function Config() {
   const A = saceApi(false);
   const [f, setF] = useState({ sace_codigo: '', sace_centro: '', sace_modalidad: '', sace_jornada: '' });
   const [msg, setMsg] = useState('');
-  useEffect(() => { A.config().then((c) => setF({ sace_codigo: c.sace_codigo || '', sace_centro: c.sace_centro || c.nombre || '', sace_modalidad: c.sace_modalidad || '', sace_jornada: c.sace_jornada || '' })).catch(() => {}); }, []);
+  const [gp, setGp] = useState(null);
+  useEffect(() => { A.config().then((c) => { setGp(!!c.plantilla_google); setF({ sace_codigo: c.sace_codigo || '', sace_centro: c.sace_centro || c.nombre || '', sace_modalidad: c.sace_modalidad || '', sace_jornada: c.sace_jornada || '' }); }).catch(() => {}); }, []);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   async function guardar(e) { e.preventDefault(); try { await A.guardarConfig(f); setMsg('Guardado'); } catch (x) { setMsg(x.message); } }
   return (
@@ -18,6 +19,7 @@ function Config() {
         <label>Modalidad<input value={f.sace_modalidad} onChange={set('sace_modalidad')} placeholder="TERCER CICLO DE EDUCACIÓN BÁSICA" /></label>
         <label>Jornada<input value={f.sace_jornada} onChange={set('sace_jornada')} placeholder="MATUTINA" /></label>
       </div>
+      <p className="text-xs text-gray-500 mt-3">{gp ? 'Se usa tu plantilla oficial de Google Sheets (se descarga como .xlsx).' : 'Plantilla de Google Sheets no configurada: se genera un .xls básico.'}</p>
       <div className="flex items-center gap-3 mt-3"><button type="submit">Guardar</button>{msg && <span className="text-sm text-gray-500">{msg}</span>}</div>
     </form>
   );

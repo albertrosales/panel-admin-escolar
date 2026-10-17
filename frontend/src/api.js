@@ -124,7 +124,7 @@ export function saceApi(portal) {
       const res = await fetch(BASE + base + '/' + id + '/xls', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(datos) });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'No se pudo generar');
       const url = URL.createObjectURL(await res.blob());
-      const a = document.createElement('a'); a.href = url; a.download = 'SACE_' + String(datos.encabezado.asignatura || id).replace(/\W+/g, '_') + '.xls'; a.click();
+      const a = document.createElement('a'); a.href = url; const m = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || ''); a.download = m ? m[1] : 'SACE.xls'; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
   };

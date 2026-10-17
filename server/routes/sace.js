@@ -65,14 +65,19 @@ module.exports = function (modo) {
       const d = req.body;
       if (!d || !d.encabezado || !Array.isArray(d.alumnos)) return res.status(400).json({ error: 'Datos incompletos' });
       if (d.encabezado.grado !== undefined) await pool.query('UPDATE grados SET sace_grado=$1 WHERE id=$2', [String(d.encabezado.grado).slice(0, 120) || null, req.params.gradoId]);
-      const buf = S.generarXls(d);
-      res.set({ 'Content-Type': 'application/vnd.ms-excel', 'Content-Disposition': `attachment; filename="SACE_${req.params.gradoId}.xls"`, 'Access-Control-Expose-Headers': 'Content-Disposition' }).send(buf);
+      const G = require('../services/googleSheets');
+      const nombre = 'SACE_' + String(d.encabezado.asignatura || req.params.gradoId).replace(/[^\w]+/g, '_');
+      let buf, ext, mime;
+      if (G.configurado()) { buf = await G.llenar(d); ext = 'xlsx'; mime = G.XLSX_MIME; }
+      else { buf = S.generarXls(d); ext = 'xls'; mime = 'application/vnd.ms-excel'; }
+      res.set({ 'Content-Type': mime, 'Content-Disposition': `attachment; filename="${nombre}.${ext}"`, 'Access-Control-Expose-Headers': 'Content-Disposition' }).send(buf);
     } catch (e) { fallo(res, e); }
   });
 
   if (modo === 'admin') {
     router.get('/config', async (req, res) => {
       const { rows: [c] } = await pool.query('SELECT sace_codigo, sace_centro, sace_modalidad, sace_jornada, nombre FROM colegios WHERE id=$1', [req.colegioId]);
+      c.plantilla_google = require('../services/googleSheets').configurado();
       res.json(c);
     });
     router.put('/config', async (req, res) => {
