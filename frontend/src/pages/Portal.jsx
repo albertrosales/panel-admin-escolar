@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SacePanel from '../components/SacePanel';
 import { api, cerrarSesionPortal } from '../api';
 import { comprimirImagen } from '../imagen';
 import EstadoBadge from '../components/EstadoBadge';
@@ -295,8 +296,14 @@ function VistaAlumno({ datos }) {
 
 function VistaProfesor({ datos }) {
   const perfil = datos.perfil;
+  const [tab, setTab] = useState('clases');
   return (
     <div>
+      <div className="flex gap-2 mb-4">
+        <button className={tab === 'clases' ? '' : 'secondary'} onClick={() => setTab('clases')}>Mis clases</button>
+        <button className={tab === 'sace' ? '' : 'secondary'} onClick={() => setTab('sace')}>SACE (notas e inasistencias)</button>
+      </div>
+      {tab === 'sace' ? <SacePanel portal /> : <>
       <div className="card">
         <h3>Mi información</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -324,6 +331,7 @@ function VistaProfesor({ datos }) {
           )}
         </div>
       ))}
+      </>}
     </div>
   );
 }

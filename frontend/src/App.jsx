@@ -17,6 +17,7 @@ import Configuracion from './pages/Configuracion';
 import Comprobantes from './pages/Comprobantes';
 import Conciliacion from './pages/Conciliacion';
 import Notificaciones from './pages/Notificaciones';
+import Sace from './pages/Sace';
 import Importacion from './pages/Importacion';
 import Matricula from './pages/Matricula';
 import Asistencia from './pages/Asistencia';
@@ -46,6 +47,7 @@ const NAV = [
   { to: '/notificaciones', label: 'Notificaciones', icon: Mail, modulo: 'notificaciones' },
   { to: '/asistencia', label: 'Asistencia', icon: ClipboardCheck, modulo: 'asistencia' },
   { to: '/usuarios/nuevo', label: 'Nuevo usuario', icon: UserPlus },
+  { to: '/sace', label: 'SACE', icon: FileSpreadsheet, modulo: 'asistencia' },
   { to: '/importacion', label: 'Importar Excel', icon: FileSpreadsheet, modulo: 'importacion', roles: ['admin', 'director', 'superadmin'] },
   { to: '/auditoria', label: 'Auditoría', icon: ScrollText, roles: ['admin', 'director', 'superadmin'] },
   { to: '/soporte', label: 'Soporte', icon: LifeBuoy },
@@ -135,6 +137,7 @@ function Panel() {
             <Route path="/usuarios/nuevo" element={<NuevoUsuario />} />
             <Route path="/comprobantes" element={<Comprobantes />} />
             <Route path="/conciliacion" element={<Conciliacion />} />
+            <Route path="/sace" element={<Sace />} />
             <Route path="/importacion" element={<Importacion />} />
             <Route path="/matricula" element={<Matricula />} />
             <Route path="/notificaciones" element={<Notificaciones />} />

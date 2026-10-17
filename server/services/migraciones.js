@@ -282,5 +282,14 @@ module.exports = async function migrar() {
       error VARCHAR(300),
       creado_en TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS sace_codigo VARCHAR(40), ADD COLUMN IF NOT EXISTS sace_centro VARCHAR(150),
+      ADD COLUMN IF NOT EXISTS sace_modalidad VARCHAR(150), ADD COLUMN IF NOT EXISTS sace_jornada VARCHAR(60);
+    ALTER TABLE grados ADD COLUMN IF NOT EXISTS sace_grado VARCHAR(120);
+    CREATE TABLE IF NOT EXISTS sace_parciales (
+      grado_id INT REFERENCES grados(id) ON DELETE CASCADE,
+      parcial INT NOT NULL CHECK (parcial BETWEEN 1 AND 4),
+      inicio DATE NOT NULL, fin DATE NOT NULL,
+      PRIMARY KEY (grado_id, parcial)
+    );
   `);
 };

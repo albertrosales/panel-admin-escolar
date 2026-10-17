@@ -109,6 +109,27 @@ export async function descargarPlantilla(tipo) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+// SACE: mismas operaciones para el panel (admin) y para el portal docente
+export function saceApi(portal) {
+  const base = portal ? '/portal-sace' : '/sace';
+  const rq = portal ? requestPortal : request;
+  return {
+    clases: () => rq(base + '/clases'),
+    guardarParciales: (id, parciales) => rq(base + '/' + id + '/parciales', { method: 'PUT', body: JSON.stringify({ parciales }) }),
+    datos: (id, justificadas) => rq(base + '/' + id + '/datos?justificadas=' + (justificadas ? 1 : 0)),
+    config: () => rq(base + '/config'),
+    guardarConfig: (d) => rq(base + '/config', { method: 'PUT', body: JSON.stringify(d) }),
+    async descargar(id, datos) {
+      const token = portal ? localStorage.getItem('portal_token') : getToken();
+      const res = await fetch(BASE + base + '/' + id + '/xls', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(datos) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'No se pudo generar');
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement('a'); a.href = url; a.download = 'SACE_' + String(datos.encabezado.asignatura || id).replace(/\W+/g, '_') + '.xls'; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+  };
+}
+
 export const api = {
   importacion: {
     analizar: (d) => request('/importacion/analizar', { method: 'POST', body: JSON.stringify(d) }),
