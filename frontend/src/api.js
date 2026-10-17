@@ -101,7 +101,19 @@ export async function descargarRespaldo(colegioId) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+export async function descargarPlantilla(tipo) {
+  const res = await fetch(BASE + '/importacion/plantilla/' + tipo, { headers: { Authorization: 'Bearer ' + getToken() } });
+  if (!res.ok) throw new Error('No se pudo descargar la plantilla');
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a'); a.href = url; a.download = 'plantilla_' + tipo + '.xlsx'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 export const api = {
+  importacion: {
+    analizar: (d) => request('/importacion/analizar', { method: 'POST', body: JSON.stringify(d) }),
+    importar: (d) => request('/importacion/importar', { method: 'POST', body: JSON.stringify(d) })
+  },
   auth: {
     login: (correo, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ correo, password }) })
   },

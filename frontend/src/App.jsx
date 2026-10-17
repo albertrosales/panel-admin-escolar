@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, Building2, LifeBuoy, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText } from 'lucide-react';
 import { api, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
 import Login from './pages/Login';
 import PortalLogin from './pages/PortalLogin';
@@ -17,6 +17,7 @@ import Configuracion from './pages/Configuracion';
 import Comprobantes from './pages/Comprobantes';
 import Conciliacion from './pages/Conciliacion';
 import Notificaciones from './pages/Notificaciones';
+import Importacion from './pages/Importacion';
 import Matricula from './pages/Matricula';
 import Asistencia from './pages/Asistencia';
 import Soporte from './pages/Soporte';
@@ -45,6 +46,7 @@ const NAV = [
   { to: '/notificaciones', label: 'Notificaciones', icon: Mail, modulo: 'notificaciones' },
   { to: '/asistencia', label: 'Asistencia', icon: ClipboardCheck, modulo: 'asistencia' },
   { to: '/usuarios/nuevo', label: 'Nuevo usuario', icon: UserPlus },
+  { to: '/importacion', label: 'Importar Excel', icon: FileSpreadsheet, modulo: 'importacion', roles: ['admin', 'director', 'superadmin'] },
   { to: '/auditoria', label: 'Auditoría', icon: ScrollText, roles: ['admin', 'director', 'superadmin'] },
   { to: '/soporte', label: 'Soporte', icon: LifeBuoy },
   { to: '/configuracion', label: 'Configuración', icon: Settings },
@@ -133,6 +135,7 @@ function Panel() {
             <Route path="/usuarios/nuevo" element={<NuevoUsuario />} />
             <Route path="/comprobantes" element={<Comprobantes />} />
             <Route path="/conciliacion" element={<Conciliacion />} />
+            <Route path="/importacion" element={<Importacion />} />
             <Route path="/matricula" element={<Matricula />} />
             <Route path="/notificaciones" element={<Notificaciones />} />
             <Route path="/asistencia" element={<Asistencia />} />
