@@ -74,6 +74,33 @@ router.post('/colegios', async (req, res) => {
   } catch (e) { fail(res, e); }
 });
 
+// Usuarios de un colegio: ver y corregir correo, nombre, contraseña o estado
+router.get('/colegios/:id/usuarios', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT id, nombre, correo, rol, activo FROM usuarios_admin WHERE colegio_id = $1 ORDER BY id', [req.params.id]);
+    res.json(rows);
+  } catch (e) { fail(res, e); }
+});
+
+router.put('/colegios/:id/usuarios/:uid', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const sets = []; const v = [req.params.uid, req.params.id];
+    const add = (col, val) => { v.push(val); sets.push(`${col} = $${v.length}`); };
+    if (b.nombre != null) { const n = String(b.nombre).trim(); if (!n) return res.status(400).json({ error: 'Nombre vacío' }); add('nombre', n); }
+    if (b.correo != null) { const c = String(b.correo).trim().toLowerCase(); if (!/^\S+@\S+\.\S+$/.test(c)) return res.status(400).json({ error: 'Correo inválido' }); add('correo', c); }
+    if (b.password) { if (String(b.password).length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' }); add('password_hash', await bcrypt.hash(String(b.password), 10)); }
+    if (typeof b.activo === 'boolean') add('activo', b.activo);
+    if (!sets.length) return res.status(400).json({ error: 'Nada que guardar' });
+    const { rowCount } = await pool.query(`UPDATE usuarios_admin SET ${sets.join(', ')} WHERE id = $1 AND colegio_id = $2`, v);
+    if (!rowCount) return res.status(404).json({ error: 'Usuario no encontrado en ese colegio' });
+    res.json({ ok: true });
+  } catch (e) {
+    if (e.code === '23505') return res.status(409).json({ error: 'Ya existe un usuario con ese correo' });
+    fail(res, e);
+  }
+});
+
 router.put('/colegios/:id', async (req, res) => {
   try {
     const b = req.body || {};

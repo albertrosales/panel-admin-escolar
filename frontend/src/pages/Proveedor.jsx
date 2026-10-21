@@ -54,6 +54,40 @@ function NuevoColegio({ planes, onListo, onCancelar }) {
   );
 }
 
+function UsuariosColegio({ colegioId }) {
+  const [lista, setLista] = useState([]);
+  const [msg, setMsg] = useState('');
+  const cargar = () => api.proveedor.usuarios(colegioId).then((r) => setLista(r.map((u) => ({ ...u, password: '' })))).catch((e) => setMsg(e.message));
+  useEffect(() => { cargar(); }, [colegioId]);
+  const set = (i, k, v) => setLista(lista.map((u, j) => (j === i ? { ...u, [k]: v } : u)));
+  async function guardar(u) {
+    setMsg('');
+    try {
+      const d = { nombre: u.nombre, correo: u.correo, activo: u.activo };
+      if (u.password) d.password = u.password;
+      await api.proveedor.editarUsuario(colegioId, u.id, d); setMsg('Usuario guardado.'); cargar();
+    } catch (e) { setMsg(e.message); }
+  }
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-500 mb-1">Usuarios del colegio (correo, contraseña y acceso)</p>
+      <div className="flex flex-col gap-2">
+        {lista.map((u, i) => (
+          <div key={u.id} className="grid sm:grid-cols-5 gap-2 items-end">
+            <label>Nombre<input value={u.nombre} onChange={(e) => set(i, 'nombre', e.target.value)} /></label>
+            <label>Correo<input type="email" value={u.correo} onChange={(e) => set(i, 'correo', e.target.value)} /></label>
+            <label>Nueva contraseña<input type="text" placeholder="(sin cambios)" value={u.password} onChange={(e) => set(i, 'password', e.target.value)} /></label>
+            <label className="!flex-row items-center gap-2 text-sm"><input type="checkbox" className="w-auto" checked={u.activo} onChange={(e) => set(i, 'activo', e.target.checked)} />Activo · {u.rol}</label>
+            <button className="secondary" onClick={() => guardar(u)}>Guardar usuario</button>
+          </div>
+        ))}
+        {lista.length === 0 && <p className="text-sm text-gray-500">Este colegio no tiene usuarios.</p>}
+      </div>
+      {msg && <p className="text-sm text-gray-600 mt-1">{msg}</p>}
+    </div>
+  );
+}
+
 function EditarColegio({ c, planes, onListo }) {
   const [f, setF] = useState({ nombre: c.nombre, plan_id: c.plan_id || '', licencia_estado: c.licencia_estado, licencia_vence: c.licencia_vence || '',
     limite_alumnos: c.limite_alumnos ?? '', limite_usuarios: c.limite_usuarios ?? '', notas_proveedor: c.notas_proveedor || '', modulos: { ...(c.modulos || {}) } });
@@ -112,6 +146,7 @@ function EditarColegio({ c, planes, onListo }) {
           ))}
         </div>
       </div>
+      <UsuariosColegio colegioId={c.id} />
       <label>Notas internas<textarea rows="2" value={f.notas_proveedor} onChange={set('notas_proveedor')} /></label>
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={guardar}>Guardar cambios</button>
