@@ -56,8 +56,8 @@ export default function Grados() {
 
       <form className="card" onSubmit={crear}>
         <p className="text-sm text-gray-500 mb-3">
-          Si eliges una categoría de Moodle, se crea el curso allá automáticamente y queda conectado.
-          Si la dejas en blanco, la clase queda solo en el panel.
+          Al crear la clase, el curso se crea al instante en el Moodle del colegio y queda conectado.
+          Puedes elegir en qué categoría de Moodle va; si no eliges, se usa la principal.
         </p>
         <div className="flex flex-col gap-3 max-w-md">
           <label>
@@ -71,7 +71,8 @@ export default function Grados() {
           <label>
             Categoría en Moodle (opcional)
             <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
-              <option value="">Sin conectar a Moodle</option>
+              <option value="">Automática (categoría principal)</option>
+              <option value="none">Solo en el panel (sin Moodle)</option>
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
@@ -103,7 +104,9 @@ export default function Grados() {
                   <input list="secciones" defaultValue={g.seccion || ''} placeholder="Sin sección" className="w-48"
                     onBlur={(e) => { if (e.target.value !== (g.seccion || '')) api.grados.asignarSeccion(g.id, e.target.value).then(cargar); }} />
                 </td>
-                <td>{g.moodle_category_id ? 'Sincronizada con Moodle' : 'Creada en el panel'}</td>
+                <td>{g.moodle_category_id ? 'Sincronizada con Moodle' : (
+                  <span>Solo en el panel <button type="button" className="secondary ml-2" onClick={() => { setError(''); api.grados.crearEnMoodle(g.id).then(cargar).catch((e3) => setError(e3.message)); }}>Crear en Moodle</button></span>
+                )}</td>
               </tr>
             ))}
             {grados.length === 0 && (
