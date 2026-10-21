@@ -3,11 +3,11 @@ const router = express.Router();
 const pool = require('../db');
 const N = require('../services/correo/notificaciones');
 const { PLANTILLAS, AUTO_VARS, MANUAL_VARS, porClave } = require('../services/correo/plantillasDefault');
-const { configurado, enviar, remitente } = require('../services/correo/mailer');
+const { disponible, enviar, remitenteDe } = require('../services/correo/mailer');
 
 router.get('/estado', async (req, res) => {
   const r = await pool.query('SELECT correo_color, correo_logo_url, correo_pie FROM colegios WHERE id = $1', [req.colegioId]);
-  res.json({ configurado: configurado(), remitente: remitente(), ...(r.rows[0] || {}), variables_auto: AUTO_VARS, variables_manuales: MANUAL_VARS });
+  res.json({ configurado: await disponible(req.colegioId), remitente: await remitenteDe(req.colegioId), ...(r.rows[0] || {}), variables_auto: AUTO_VARS, variables_manuales: MANUAL_VARS });
 });
 
 router.put('/estado', async (req, res) => {
@@ -58,13 +58,13 @@ router.post('/vista-previa', async (req, res) => {
 // Prueba: se envía solo a la dirección indicada, con datos reales del primer alumno del grupo
 router.post('/prueba', async (req, res) => {
   try {
-    if (!configurado()) return res.status(400).json({ error: 'El correo no está configurado en el servidor' });
+    if (!(await disponible(req.colegioId))) return res.status(400).json({ error: 'Este colegio no tiene correo de envío configurado' });
     const para = String(req.body.para || '').trim();
     if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(para)) return res.status(400).json({ error: 'Escribe un correo válido para la prueba' });
     const v = await N.vistaPrevia(req.colegioId, req.body);
     if (!v.vista) return res.status(400).json({ error: 'No hay alumnos para generar la prueba' });
     const { rows: [c] } = await pool.query('SELECT nombre FROM colegios WHERE id = $1', [req.colegioId]);
-    await enviar({ nombreRemitente: c.nombre, to: para, asunto: '[Prueba] ' + v.vista.asunto, html: v.vista.html, texto: v.vista.asunto });
+    await enviar({ colegioId: req.colegioId, nombreRemitente: c.nombre, to: para, asunto: '[Prueba] ' + v.vista.asunto, html: v.vista.html, texto: v.vista.asunto });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

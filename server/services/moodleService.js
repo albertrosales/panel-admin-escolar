@@ -92,6 +92,17 @@ function generarPasswordSegura() {
   return 'Aa1' + especial + Math.random().toString(36).slice(-6) + Math.random().toString(36).slice(-4).toUpperCase();
 }
 
+async function updatePassword(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  return call('core_user_update_users', { 'users[0][id]': opts.userId, 'users[0][password]': opts.password });
+}
+
+async function getUserById(opts) {
+  const call = buildClient(opts.moodleUrl, opts.token);
+  const r = await call('core_user_get_users_by_field', { field: 'id', 'values[0]': opts.userId });
+  return r && r[0] ? r[0] : null;
+}
+
 async function getOrCreateUser(opts) {
   if (!opts.email) throw new Error('Se requiere un correo para crear el usuario en Moodle');
 
@@ -163,6 +174,9 @@ module.exports = {
   getEnrolledUsers: getEnrolledUsers,
   createUser: createUser,
   getOrCreateUser: getOrCreateUser,
+  updatePassword: updatePassword,
+  getUserById: getUserById,
+  generarPasswordSegura: generarPasswordSegura,
   enrolUser: enrolUser,
   unenrolUser: unenrolUser,
   getCategories: getCategories,

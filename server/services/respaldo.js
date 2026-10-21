@@ -7,7 +7,7 @@ const ALU = 'SELECT id FROM alumnos WHERE colegio_id = $1';
 const PRO = 'SELECT id FROM profesores WHERE colegio_id = $1';
 // Orden pensado para poder restaurar respetando las relaciones entre tablas
 const TABLAS = [
-  ['colegios', 'id = $1', ['moodle_token']],
+  ['colegios', 'id = $1', ['moodle_token', 'gmail_refresh_token']],
   ['grados', 'colegio_id = $1'], ['alumnos', 'colegio_id = $1'], ['profesores', 'colegio_id = $1'], ['usuarios_admin', 'colegio_id = $1'],
   ['matriculas', `alumno_id IN (${ALU})`], ['pagos', `alumno_id IN (${ALU})`], ['planes_pago', `alumno_id IN (${ALU})`],
   ['plan_pago_cuotas', `plan_pago_id IN (SELECT id FROM planes_pago WHERE alumno_id IN (${ALU}))`],

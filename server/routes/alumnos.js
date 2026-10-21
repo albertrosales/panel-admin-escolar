@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { evaluarEstadoAlumno } = require('../services/estadoPagoService');
+const { enviarCredenciales, reenviarCredenciales } = require('../services/correo/credenciales');
 const { getOrCreateUser, setIdNumber, enrolUser, setEnrolmentSuspension, STUDENT_ROLE_ID } = require('../services/moodleService');
 
 // Toda ruta con :id verifica que el alumno sea del colegio de quien pide
@@ -175,8 +176,16 @@ router.post('/', async (req, res) => {
       [alumno.id, 'Alumno matriculado en ' + grados.length + ' clase(s)']
     );
 
+    let correoCredenciales = null;
+    if (moodleInfo && moodleInfo.creado) {
+      try {
+        correoCredenciales = await enviarCredenciales({ colegioId: req.colegioId, para: correoParaMoodle, nombre: b.nombre_completo,
+          usuario: moodleInfo.username, contrasena: moodleInfo.password, alumnoId: alumno.id });
+      } catch (e) { correoCredenciales = { enviado: false, motivo: e.message }; }
+    }
+
     res.status(201).json({
-      alumno, moodle: moodleInfo, avisoCodigo,
+      alumno, moodle: moodleInfo, avisoCodigo, correoCredenciales,
       clasesMatriculadas: grados.map(g => g.nombre),
       erroresMatricula
     });
@@ -210,6 +219,17 @@ router.patch('/:id', async (req, res) => {
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
+});
+
+// Genera una contraseña nueva en Moodle y la envía por correo
+router.post('/:id/credenciales', async (req, res) => {
+  try {
+    const { rows: [a] } = await pool.query('SELECT * FROM alumnos WHERE id = $1 AND colegio_id = $2', [req.params.id, req.colegioId]);
+    if (!a) return res.status(404).json({ error: 'Alumno no encontrado' });
+    const r = await reenviarCredenciales({ colegioId: req.colegioId, moodleUserId: a.moodle_user_id,
+      para: req.body.correo || a.correo_alumno || a.correo_encargado, nombre: a.nombre_completo, alumnoId: a.id });
+    res.json(r);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/dar-de-baja', async (req, res) => {

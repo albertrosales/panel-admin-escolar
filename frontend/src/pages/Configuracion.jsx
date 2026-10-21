@@ -25,6 +25,36 @@ function MiPlan({ ctx }) {
   );
 }
 
+function CorreoEnvio() {
+  const [e, setE] = useState(null);
+  const [msg, setMsg] = useState('');
+  const cargar = () => api.correoEnvio.estado().then(setE).catch((x) => setMsg(x.message));
+  useEffect(() => {
+    cargar();
+    const q = new URLSearchParams(window.location.search).get('correo');
+    const M = { ok: 'Correo conectado correctamente.', cancelado: 'Conexión cancelada.', sin_permiso: 'Google no entregó el permiso. Vuelve a intentarlo y acepta todo.', error: 'No se pudo conectar el correo.' };
+    if (q) setMsg(M[q] || '');
+  }, []);
+  async function conectar() {
+    try { const r = await api.correoEnvio.iniciar(); window.location.href = r.url; } catch (x) { setMsg(x.message); }
+  }
+  async function quitar() { if (!confirm('¿Desconectar este correo?')) return; await api.correoEnvio.desconectar(); setMsg('Correo desconectado.'); cargar(); }
+  return (
+    <div className="card">
+      <h3>Correo de envío</h3>
+      <p className="text-sm text-gray-500 mb-3">Desde este Gmail se envían los correos del colegio: bienvenida con credenciales, avisos de pago, asistencia y comunicados. Cada colegio conecta el suyo.</p>
+      {e && e.correo
+        ? <p className="mb-2">Conectado: <strong>{e.correo}</strong></p>
+        : <p className="mb-2 text-amber-700">Sin correo conectado. {e && !e.disponible ? 'El servidor aún no tiene configurado el acceso a Google.' : ''}</p>}
+      <div className="flex gap-2">
+        <button type="button" onClick={conectar} disabled={!e || !e.disponible}>{e && e.correo ? 'Cambiar correo' : 'Conectar Gmail'}</button>
+        {e && e.correo && <button type="button" className="secondary" onClick={quitar}>Desconectar</button>}
+      </div>
+      {msg && <p className="text-sm text-gray-500 mt-2">{msg}</p>}
+    </div>
+  );
+}
+
 function Marca({ ctx, recargarCtx }) {
   const [f, setF] = useState({ nombre: ctx.colegio.nombre, color: ctx.colegio.color || '#2455e6', pie: ctx.colegio.pie || '' });
   const [msg, setMsg] = useState('');
@@ -122,6 +152,7 @@ export default function Configuracion({ ctx, recargarCtx }) {
       <h2>Configuración</h2>
       {ctx && <MiPlan ctx={ctx} />}
       {ctx && <Marca ctx={ctx} recargarCtx={recargarCtx} />}
+      <CorreoEnvio />
 
       <div className="card">
         <h3>Día de vencimiento mensual</h3>

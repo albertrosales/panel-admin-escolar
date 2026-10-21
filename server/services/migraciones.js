@@ -291,5 +291,6 @@ module.exports = async function migrar() {
       inicio DATE NOT NULL, fin DATE NOT NULL,
       PRIMARY KEY (grado_id, parcial)
     );
+    ALTER TABLE colegios ADD COLUMN IF NOT EXISTS gmail_refresh_token TEXT, ADD COLUMN IF NOT EXISTS gmail_correo VARCHAR(150);
   `);
 };

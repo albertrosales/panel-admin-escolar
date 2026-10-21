@@ -155,7 +155,13 @@ export const api = {
     asignarSeccion: (id, seccion) => request('/grados/' + id, { method: 'PATCH', body: JSON.stringify({ seccion }) }),
     listarCategoriasMoodle: (params) => request('/grados/categorias-moodle?' + new URLSearchParams(params))
   },
+  correoEnvio: {
+    estado: () => request('/correo-oauth/estado'),
+    iniciar: () => request('/correo-oauth/iniciar'),
+    desconectar: () => request('/correo-oauth', { method: 'DELETE' })
+  },
   alumnos: {
+    enviarCredenciales: (id, data) => request('/alumnos/' + id + '/credenciales', { method: 'POST', body: JSON.stringify(data || {}) }),
     listar: (params) => request('/alumnos?' + new URLSearchParams(params)),
     detalle: (id) => request('/alumnos/' + id),
     porCodigo: (codigo) => request('/alumnos/por-codigo/' + encodeURIComponent(codigo)),
@@ -167,6 +173,7 @@ export const api = {
     reactivar: (id) => request('/alumnos/' + id + '/reactivar', { method: 'POST' })
   },
   profesores: {
+    enviarCredenciales: (id, data) => request('/profesores/' + id + '/credenciales', { method: 'POST', body: JSON.stringify(data || {}) }),
     listar: (params) => request('/profesores?' + new URLSearchParams(params)),
     detalle: (id) => request('/profesores/' + id),
     crear: (data) => request('/profesores', { method: 'POST', body: JSON.stringify(data) }),

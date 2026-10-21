@@ -3,6 +3,10 @@
 const INST = '{{nombre_institucion}}';
 
 const PLANTILLAS = [
+  { clave: 'credenciales', grupo: 'Acceso', nombre: 'Bienvenida y credenciales de acceso',
+    asunto: 'Bienvenido a {{nombre_institucion}}',
+    cuerpo: `Bienvenido a {{nombre_institucion}}.\n\nSus credenciales de acceso son las siguientes:\n\nUsuario: {{usuario}}\nContraseña: {{contrasena}}\n\nClases Virtuales: {{enlace_moodle}}\nSistema: {{enlace_sistema}}\n\nLe recomendamos cambiar su contraseña al ingresar por primera vez.\n\n${INST}`,
+    auto: null },
   { clave: 'recordatorio_vencimiento', grupo: 'Pagos', nombre: 'Mensualidad próxima a vencer',
     asunto: 'Recordatorio de mensualidad',
     cuerpo: `Estimado padre, madre o encargado:\n\nLe recordamos que la mensualidad de {{mes}} de {{nombre_alumno}} vence el {{fecha_vencimiento}}.\n\nMonto pendiente: {{monto}}\n\nGracias por mantener sus pagos al día.\n\n${INST}`,
@@ -75,7 +79,7 @@ const PLANTILLAS = [
 
 // Variables que se completan automáticamente con datos de la base de datos
 const AUTO_VARS = ['nombre_institucion', 'nombre_alumno', 'codigo_alumno', 'nombre_destinatario', 'mes', 'fecha_vencimiento', 'monto', 'concepto',
-  'fecha_pago', 'motivo_rechazo', 'grado', 'estado_asistencia', 'cantidad_ausencias'];
+  'fecha_pago', 'usuario', 'contrasena', 'enlace_moodle', 'enlace_sistema', 'motivo_rechazo', 'grado', 'estado_asistencia', 'cantidad_ausencias'];
 // Variables que escribe quien envía (si la plantilla las usa)
 const MANUAL_VARS = {
   asunto: 'Asunto', mensaje_director: 'Mensaje', mensaje_personalizado: 'Mensaje', fecha: 'Fecha', hora: 'Hora', lugar: 'Lugar',

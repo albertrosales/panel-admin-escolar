@@ -1,3 +1,4 @@
+import CredencialesAviso from '../components/CredencialesAviso';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -68,6 +69,7 @@ export default function NuevoProfesor() {
         <div className="card">
           <p><strong>{resultado.profesor.nombre_completo}</strong> fue registrado correctamente.</p>
 
+          {resultado.moodle && <CredencialesAviso envio={resultado.correoCredenciales} enviarNueva={() => api.profesores.enviarCredenciales(resultado.profesor.id)} />}
           {resultado.moodle && resultado.moodle.creado && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p><strong>Se creó un usuario nuevo en Moodle. Copia estos datos ahora, no se volverán a mostrar:</strong></p>

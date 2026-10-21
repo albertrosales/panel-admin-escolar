@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { enviarCredenciales, reenviarCredenciales } = require('../services/correo/credenciales');
 const { getOrCreateUser, enrolUser, TEACHER_ROLE_ID } = require('../services/moodleService');
 
 // Toda ruta con :id verifica que el profesor sea del colegio de quien pide
@@ -122,7 +123,15 @@ router.post('/', async (req, res) => {
       }
     }
 
-    res.status(201).json({ profesor, moodle: moodleInfo, erroresAsignacion });
+    let correoCredenciales = null;
+    if (moodleInfo && moodleInfo.creado) {
+      try {
+        correoCredenciales = await enviarCredenciales({ colegioId, para: b.correo, nombre: b.nombre_completo,
+          usuario: moodleInfo.username, contrasena: moodleInfo.password });
+      } catch (e) { correoCredenciales = { enviado: false, motivo: e.message }; }
+    }
+
+    res.status(201).json({ profesor, moodle: moodleInfo, erroresAsignacion, correoCredenciales });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -152,6 +161,15 @@ router.patch('/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Genera una contraseña nueva en Moodle y la envía por correo
+router.post('/:id/credenciales', async (req, res) => {
+  try {
+    const { rows: [p] } = await pool.query('SELECT * FROM profesores WHERE id = $1 AND colegio_id = $2', [req.params.id, req.colegioId]);
+    if (!p) return res.status(404).json({ error: 'Profesor no encontrado' });
+    res.json(await reenviarCredenciales({ colegioId: req.colegioId, moodleUserId: p.moodle_user_id, para: req.body.correo || p.correo, nombre: p.nombre_completo }));
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/dar-de-baja', async (req, res) => {

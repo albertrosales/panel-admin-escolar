@@ -1,6 +1,6 @@
 const pool = require('../../db');
 const { render, renderAsunto, htmlCorreo } = require('./render');
-const { configurado, enviar } = require('./mailer');
+const { disponible, enviar } = require('./mailer');
 const { PLANTILLAS, MANUAL_VARS, porClave } = require('./plantillasDefault');
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -79,8 +79,8 @@ async function insertar({ colegioId, alumnoId, clave, para, m, referencia, lote,
 
 /** Envío automático por evento. Solo si el correo está configurado y la plantilla está activa. */
 async function auto(clave, alumnoId, referencia, { pagoId, extras } = {}) {
-  if (!configurado()) return null;
   const ctx = await variablesAlumno(alumnoId, { pagoId });
+  if (ctx && !(await disponible(ctx.alumno.colegio_id))) return null;
   if (!ctx || !ctx.alumno.activo || !ctx.alumno.correo_encargado) return null;
   if (!(await require('../licencias').moduloActivo(ctx.alumno.colegio_id, 'notificaciones'))) return null;
   const pl = await cargarPlantilla(ctx.alumno.colegio_id, clave);
@@ -121,7 +121,7 @@ const matricula = (solicitudId, evento) => seguro((async () => {
 
 /** Asistencia registrada: ausencia, ausencias consecutivas y registro general (solo fechas recientes) */
 const asistencia = (colegioId, fecha, registros) => seguro((async () => {
-  if (!configurado()) return;
+  if (!(await disponible(colegioId))) return;
   const d = aFecha(fecha);
   if (!d || (Date.now() - d.getTime()) / 86400000 > 3) return; // no avisar por asistencias antiguas
   const cons = await cargarPlantilla(colegioId, 'ausencias_consecutivas');
@@ -143,9 +143,9 @@ const asistencia = (colegioId, fecha, registros) => seguro((async () => {
 
 /** Recordatorios y avisos de mora (diario). No avisa si ya hay un comprobante en revisión para ese cobro. */
 async function notificarCobros() {
-  if (!configurado()) return;
   const { rows: colegios } = await pool.query('SELECT id FROM colegios WHERE activo = TRUE');
   for (const c of colegios) {
+    if (!(await disponible(c.id))) continue;
     const rec = await cargarPlantilla(c.id, 'recordatorio_vencimiento');
     if (rec && rec.activa) {
       const dias = Number(rec.parametro) || 3;
@@ -195,7 +195,7 @@ async function vistaPrevia(colegioId, { asunto, cuerpo, extras, audiencia, alumn
 }
 
 async function enviarManual(colegioId, usuario, { clave, asunto, cuerpo, extras, audiencia }) {
-  if (!configurado()) { const e = new Error('El correo no está configurado en el servidor'); e.status = 400; throw e; }
+  if (!(await disponible(colegioId))) { const e = new Error('Este colegio no tiene correo de envío configurado (Configuración → Correo de envío)'); e.status = 400; throw e; }
   const falta = variablesManualesFaltantes(asunto, cuerpo, extras);
   if (falta.length) { const e = new Error('Completa: ' + falta.map((k) => MANUAL_VARS[k]).join(', ')); e.status = 400; throw e; }
   const ex = { nombre_director: usuario, ...(extras || {}) };
@@ -226,7 +226,7 @@ async function enviarManual(colegioId, usuario, { clave, asunto, cuerpo, extras,
 // ---------- Cola de envío: un correo por destinatario (nadie ve las direcciones de otros) ----------
 let procesando = false;
 async function procesarPendientes() {
-  if (procesando || !configurado()) return;
+  if (procesando) return;
   procesando = true;
   try {
     await pool.query(`UPDATE notificaciones_correo SET estado='pendiente' WHERE estado='enviando' AND creado_en < NOW() - interval '10 minutes'`);
@@ -239,7 +239,7 @@ async function procesarPendientes() {
       for (const n of rows) {
         try {
           const { rows: [c] } = await pool.query('SELECT nombre FROM colegios WHERE id = $1', [n.colegio_id]);
-          await enviar({ nombreRemitente: c && c.nombre, to: n.destinatario, asunto: n.asunto, html: n.cuerpo_html, texto: n.cuerpo_texto });
+          await enviar({ colegioId: n.colegio_id, nombreRemitente: c && c.nombre, to: n.destinatario, asunto: n.asunto, html: n.cuerpo_html, texto: n.cuerpo_texto });
           await pool.query(`UPDATE notificaciones_correo SET estado='enviado', enviado_en=NOW(), error=NULL WHERE id=$1`, [n.id]);
         } catch (e) {
           await pool.query(`UPDATE notificaciones_correo SET intentos = intentos + 1, error = $2, estado = CASE WHEN intentos + 1 >= 3 THEN 'fallido' ELSE 'pendiente' END WHERE id = $1`, [n.id, String(e.message).slice(0, 300)]);
