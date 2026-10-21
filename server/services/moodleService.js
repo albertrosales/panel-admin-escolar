@@ -1,7 +1,10 @@
 const axios = require('axios');
 
 function buildClient(moodleUrl, token) {
-  const endpoint = moodleUrl.replace(/\/$/, '') + '/webservice/rest/server.php';
+  // Acepta la dirección con o sin https:// y con o sin barra final
+  let base = String(moodleUrl || '').trim().replace(/\/+$/, '');
+  if (base && !/^https?:\/\//i.test(base)) base = 'https://' + base;
+  const endpoint = base + '/webservice/rest/server.php';
 
   return async function callMoodle(wsfunction, params) {
     params = params || {};

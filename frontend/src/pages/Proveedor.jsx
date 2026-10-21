@@ -89,7 +89,7 @@ function UsuariosColegio({ colegioId }) {
 }
 
 function EditarColegio({ c, planes, onListo }) {
-  const [f, setF] = useState({ nombre: c.nombre, plan_id: c.plan_id || '', licencia_estado: c.licencia_estado, licencia_vence: c.licencia_vence || '',
+  const [f, setF] = useState({ nombre: c.nombre, moodle_url: c.moodle_url || '', plan_id: c.plan_id || '', licencia_estado: c.licencia_estado, licencia_vence: c.licencia_vence || '',
     limite_alumnos: c.limite_alumnos ?? '', limite_usuarios: c.limite_usuarios ?? '', notas_proveedor: c.notas_proveedor || '', modulos: { ...(c.modulos || {}) } });
   const [dias, setDias] = useState(30);
   const [msg, setMsg] = useState('');
@@ -117,6 +117,7 @@ function EditarColegio({ c, planes, onListo }) {
     <div className="border border-gray-200 rounded-xl p-4 mt-3 flex flex-col gap-3 bg-gray-50">
       <div className="grid sm:grid-cols-3 gap-3">
         <label>Nombre<input value={f.nombre} onChange={set('nombre')} /></label>
+        <label>Dirección de su Moodle<input value={f.moodle_url} onChange={set('moodle_url')} placeholder="https://campus.colegio.com" /></label>
         <label>Plan
           <select value={f.plan_id} onChange={set('plan_id')}>
             <option value="">Sin plan (todo habilitado)</option>

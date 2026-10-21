@@ -43,11 +43,13 @@ router.get('/colegios', async (req, res) => {
 });
 
 // Alta de un colegio nuevo (el token de Moodle se lee de una variable de entorno de Render)
+const urlMoodle = (u) => { let x = String(u || '').trim().replace(/\/+$/, ''); if (x && !/^https?:\/\//i.test(x)) x = 'https://' + x; return x; };
+
 router.post('/colegios', async (req, res) => {
   try {
     const b = req.body || {};
     const nombre = String(b.nombre || '').trim();
-    const moodleUrl = String(b.moodle_url || '').trim().replace(/\/$/, '');
+    const moodleUrl = urlMoodle(b.moodle_url);
     const variable = String(b.variable_token || '');
     if (!nombre || !moodleUrl || !/^MOODLE_TOKEN_[A-Z0-9_]+$/.test(variable)) return res.status(400).json({ error: 'Indica nombre, dirección de Moodle y la variable del token (MOODLE_TOKEN_...)' });
     if (!process.env[variable]) return res.status(400).json({ error: 'La variable ' + variable + ' todavía no existe en Render' });
@@ -107,6 +109,7 @@ router.put('/colegios/:id', async (req, res) => {
     const sets = []; const v = [req.params.id];
     const add = (col, val) => { v.push(val); sets.push(`${col} = $${v.length}`); };
     if (b.nombre != null) { const n = String(b.nombre).trim(); if (!n) return res.status(400).json({ error: 'Nombre vacío' }); add('nombre', n); }
+    if (b.moodle_url != null) { const u = urlMoodle(b.moodle_url); if (!/^https?:\/\/[^\s/]+\.[^\s/]+/.test(u)) return res.status(400).json({ error: 'Dirección de Moodle inválida (ej. https://campus.colegio.com)' }); add('moodle_url', u); }
     if ('plan_id' in b) add('plan_id', b.plan_id || null);
     if (b.licencia_estado != null) { if (!['prueba', 'activa', 'suspendida'].includes(b.licencia_estado)) return res.status(400).json({ error: 'Estado inválido' }); add('licencia_estado', b.licencia_estado); }
     if ('licencia_vence' in b) add('licencia_vence', b.licencia_vence || null);
