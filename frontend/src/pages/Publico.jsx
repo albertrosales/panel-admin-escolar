@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
+import privacidadMd from '../legal/privacidad.md?raw';
+import terminosMd from '../legal/terminos.md?raw';
 
 const CORREO = 'albertrosales.tv@gmail.com';
-const ACTUALIZADO = '22 de octubre de 2026';
 
 function Marco({ titulo, children }) {
   return (
@@ -44,62 +45,32 @@ export function Inicio() {
   );
 }
 
+const e = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// Convierte el texto en Markdown (títulos, listas, negritas, enlaces, código) a HTML
+function mdAHtml(md) {
+  const inline = (t) => e(t)
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+|mailto:[^)\s]+)\)/g, '<a class="underline text-blue-700" href="$2">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const out = []; let lista = false;
+  const cerrar = () => { if (lista) { out.push('</ul>'); lista = false; } };
+  for (const l of md.split('\n')) {
+    const t = l.trimEnd();
+    if (/^- /.test(t)) { if (!lista) { out.push('<ul>'); lista = true; } out.push('<li>' + inline(t.slice(2)) + '</li>'); continue; }
+    cerrar();
+    if (/^### /.test(t)) out.push('<h3 style="font-weight:600;margin:14px 0 6px">' + inline(t.slice(4)) + '</h3>');
+    else if (/^## /.test(t)) out.push('<h2>' + inline(t.slice(3)) + '</h2>');
+    else if (/^# /.test(t)) continue;
+    else if (t.trim()) out.push('<p>' + inline(t) + '</p>');
+  }
+  cerrar();
+  return out.join('\n');
+}
+const tituloDe = (md) => (md.match(/^# (.+)$/m) || [, ''])[1];
+
 export function Privacidad() {
-  return (
-    <Marco titulo="Política de Privacidad">
-      <p>Última actualización: {ACTUALIZADO}</p>
-      <p>Esta política describe cómo <strong>ulúa Campus</strong>, operada por ulúa Media (Tocoa, Colón, Honduras), trata la información de los colegios que la utilizan, de su personal, alumnos y familias.</p>
-      <h2>1. Información que tratamos</h2>
-      <ul>
-        <li>Datos que el colegio registra: nombres, códigos, grados, correos, teléfonos, asistencia, calificaciones y pagos.</li>
-        <li>Credenciales de acceso a la plataforma y a las clases virtuales (las contraseñas se generan automáticamente).</li>
-        <li>Si el colegio conecta Gmail: la dirección de correo de la cuenta conectada y un código de autorización que nos entrega Google.</li>
-      </ul>
-      <h2>2. Uso de Google (Gmail)</h2>
-      <p>El uso y la transferencia a cualquier otra app de la información recibida de las API de Google se ajustarán a la <a className="underline text-blue-700" href="https://developers.google.com/terms/api-services-user-data-policy">Política de Datos de Usuario de los Servicios de API de Google</a>, incluidos los requisitos de Uso Limitado.</p>
-      <ul>
-        <li><strong>Permiso solicitado:</strong> únicamente <em>enviar correo</em> (gmail.send), además de identificar la dirección de la cuenta conectada.</li>
-        <li><strong>Para qué lo usamos:</strong> enviar, en nombre del colegio, los correos de la institución: bienvenida con credenciales, avisos de pagos, asistencia y comunicados.</li>
-        <li><strong>Lo que no hacemos:</strong> no leemos, buscamos, modificamos ni eliminamos mensajes; no accedemos a contactos ni a otros datos de la cuenta; no usamos esta información para publicidad ni la vendemos o compartimos con terceros.</li>
-        <li><strong>Almacenamiento:</strong> el código de autorización se guarda cifrado en nuestra base de datos y se usa solo para enviar los correos del colegio.</li>
-        <li><strong>Revocación:</strong> el administrador puede desconectar el correo en Configuración → Correo de envío, o retirar el acceso en <a className="underline text-blue-700" href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>. Al desconectar, el código se elimina de nuestros sistemas.</li>
-      </ul>
-      <h2>3. Con quién compartimos</h2>
-      <p>No vendemos información. Usamos proveedores necesarios para operar el servicio: alojamiento (Render), Moodle del propio colegio y Google para el envío de correos. Solo se comparte lo necesario para ofrecer el servicio.</p>
-      <h2>4. Seguridad y conservación</h2>
-      <p>Las comunicaciones viajan cifradas (HTTPS), los accesos están separados por colegio y los datos sensibles se guardan cifrados. Conservamos la información mientras el colegio mantenga su licencia; al terminar, el colegio puede solicitar la entrega o eliminación de sus datos.</p>
-      <h2>5. Datos de menores</h2>
-      <p>La plataforma maneja datos de estudiantes, incluidos menores de edad, que registra y administra el colegio como responsable. ulúa Media los trata solo para prestar el servicio.</p>
-      <h2>6. Tus derechos</h2>
-      <p>Para consultar, corregir o eliminar información, o para dudas sobre esta política, escribe a <a className="underline text-blue-700" href={'mailto:' + CORREO}>{CORREO}</a>. Si el dato pertenece a un colegio, la solicitud se coordina con la institución.</p>
-      <h2>7. Cambios</h2>
-      <p>Podemos actualizar esta política; la fecha al inicio indica la última versión.</p>
-    </Marco>
-  );
+  return <Marco titulo={tituloDe(privacidadMd)}><div dangerouslySetInnerHTML={{ __html: mdAHtml(privacidadMd) }} /></Marco>;
 }
 
 export function Terminos() {
-  return (
-    <Marco titulo="Términos del Servicio">
-      <p>Última actualización: {ACTUALIZADO}</p>
-      <h2>1. Servicio</h2>
-      <p>ulúa Campus es una plataforma de administración escolar ofrecida por ulúa Media a colegios mediante una licencia. El uso implica aceptar estos términos.</p>
-      <h2>2. Cuentas y responsabilidades</h2>
-      <ul>
-        <li>El colegio es responsable de la información que registra y de los usuarios que autoriza.</li>
-        <li>Las credenciales son personales; se recomienda cambiar la contraseña al ingresar.</li>
-        <li>No se permite usar la plataforma para actividades ilegales, envío de correo no solicitado (spam) o contenido ofensivo.</li>
-      </ul>
-      <h2>3. Correo de envío</h2>
-      <p>Si el colegio conecta su Gmail, autoriza a la plataforma a enviar correos de la institución desde esa cuenta. Debe usarlo conforme a las políticas de Google y puede desconectarlo en cualquier momento.</p>
-      <h2>4. Disponibilidad</h2>
-      <p>Procuramos mantener el servicio disponible, sin garantizar que esté libre de interrupciones. Se realizan respaldos periódicos de la información.</p>
-      <h2>5. Licencia y pagos</h2>
-      <p>El acceso depende de una licencia vigente según el plan acordado con ulúa Media. Al vencer sin renovación, el acceso pasa a solo consulta.</p>
-      <h2>6. Datos al terminar</h2>
-      <p>Al finalizar el servicio, las condiciones de entrega o eliminación de los datos se acuerdan con ulúa Media.</p>
-      <h2>7. Contacto</h2>
-      <p><a className="underline text-blue-700" href={'mailto:' + CORREO}>{CORREO}</a></p>
-    </Marco>
-  );
+  return <Marco titulo={tituloDe(terminosMd)}><div dangerouslySetInnerHTML={{ __html: mdAHtml(terminosMd) }} /></Marco>;
 }
