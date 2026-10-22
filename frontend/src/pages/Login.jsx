@@ -74,11 +74,11 @@ export default function Login() {
           <a className="support-button" href="https://wa.me/50489012215" target="_blank" rel="noreferrer">
             Soporte técnico <span aria-hidden="true">↗</span>
           </a>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Link className="support-button" style={{ flex: 1, justifyContent: 'center' }} to="/privacidad">Privacidad</Link>
-            <Link className="support-button" style={{ flex: 1, justifyContent: 'center' }} to="/terminos">Términos</Link>
-          </div>
         </form>
+        <p style={{ position: 'absolute', bottom: 18, left: 0, right: 0, textAlign: 'center', fontSize: 12 }}>
+          <Link to="/privacidad" style={{ color: '#6b7280', margin: '0 10px' }}>Privacidad</Link>
+          <Link to="/terminos" style={{ color: '#6b7280', margin: '0 10px' }}>Términos</Link>
+        </p>
       </section>
     </main>
   );

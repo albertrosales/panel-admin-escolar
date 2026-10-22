@@ -72,7 +72,7 @@
 .login-visual-copy h1 { margin:.9rem 0 1rem; color:#fff; font-size:clamp(2.5rem,5vw,5.4rem); line-height:.95; letter-spacing:-.06em; }
 .login-visual-copy h1 em { color:#aebdff; font-style:normal; }
 .login-visual-copy p { max-width:390px; color:#b8c2dc; font-size:1.05rem; line-height:1.6; }
-.login-panel { display:grid; place-items:center; padding:2rem; background:#fff; }
+.login-panel { position:relative; display:grid; place-items:center; padding:2rem; background:#fff; }
 .login-card { width:min(100%,390px); padding:clamp(1.5rem,4vw,3rem); }
 .brand-mark { display:grid; place-items:center; width:44px; height:44px; border-radius:14px; color:#fff; background:linear-gradient(135deg,#5a7cff,#2945c7); box-shadow:0 12px 24px rgba(55,82,210,.24); font-size:.8rem; font-weight:800; letter-spacing:.04em; }
 .login-kicker { margin:2rem 0 .55rem; color:#5673dd; font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
