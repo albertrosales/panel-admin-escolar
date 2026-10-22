@@ -39,7 +39,7 @@ router.get('/callback', async (req, res) => {
     if (!correo) return volver('error');
     await pool.query('UPDATE colegios SET gmail_refresh_token = $1, gmail_correo = $2 WHERE id = $3', [cifrar(t.data.refresh_token), correo, st.c]);
     volver('ok');
-  } catch (e) { console.error('correo-oauth:', e.message); volver('error'); }
+  } catch (e) { console.error('correo-oauth:', e.message, JSON.stringify(e.response && e.response.data || '')); volver('error'); }
 });
 
 router.get('/estado', requireAuth, async (req, res) => {
