@@ -74,6 +74,10 @@ export default function Login() {
           <a className="support-button" href="https://wa.me/50489012215" target="_blank" rel="noreferrer">
             Soporte técnico <span aria-hidden="true">↗</span>
           </a>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Link className="support-button" style={{ flex: 1, justifyContent: 'center' }} to="/privacidad">Privacidad</Link>
+            <Link className="support-button" style={{ flex: 1, justifyContent: 'center' }} to="/terminos">Términos</Link>
+          </div>
         </form>
       </section>
     </main>
