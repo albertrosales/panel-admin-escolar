@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-do
 import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText } from 'lucide-react';
 import { api, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
 import Login from './pages/Login';
+import { Inicio, Privacidad, Terminos } from './pages/Publico';
 import PortalLogin from './pages/PortalLogin';
 import Portal from './pages/Portal';
 import Dashboard from './pages/Dashboard';
@@ -171,6 +172,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/inicio" element={<Inicio />} />
+        <Route path="/privacidad" element={<Privacidad />} />
+        <Route path="/terminos" element={<Terminos />} />
         <Route path="/login" element={<Login />} />
         <Route path="/portal/login" element={<PortalLogin />} />
         <Route path="/portal" element={<RutaPortal><Portal /></RutaPortal>} />
