@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { api, urlLogo } from '../api';
 import { comprimirImagen } from '../imagen';
 
 const COLEGIO_ID = 1;
@@ -80,7 +80,7 @@ function Marca({ ctx, recargarCtx }) {
         <label>Color principal<input type="color" className="w-20 h-10 p-1" value={f.color} onChange={(e) => setF({ ...f, color: e.target.value })} /></label>
         <label>Pie de los correos (opcional)<input value={f.pie} onChange={(e) => setF({ ...f, pie: e.target.value })} placeholder="Tocoa, Colón · Tel. ..." /></label>
         <div className="flex items-center gap-3">
-          {ctx.colegio.tiene_logo ? <img src={'/api/marca/' + ctx.colegio.id + '/logo?' + Date.now()} alt="Logo" className="h-12 w-auto border border-gray-200 rounded-lg p-1" /> : <span className="text-sm text-gray-500">Sin logo</span>}
+          {ctx.colegio.tiene_logo ? <img src={urlLogo(ctx.colegio.id) + '?' + Date.now()} alt="Logo" className="h-12 w-auto border border-gray-200 rounded-lg p-1" /> : <span className="text-sm text-gray-500">Sin logo</span>}
           <label className="!flex-row items-center gap-2"><span className="underline cursor-pointer text-blue-600">Subir logo (PNG o JPG)</span><input type="file" accept="image/png,image/jpeg" className="hidden" onChange={subirLogo} /></label>
           {ctx.colegio.tiene_logo && <button type="button" className="secondary" onClick={quitarLogo}>Quitar</button>}
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText, Wallet, Ticket, Menu } from 'lucide-react';
-import { api, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
+import { api, urlLogo, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
 import Login from './pages/Login';
 import { Inicio, Privacidad, Terminos } from './pages/Publico';
 import PortalLogin from './pages/PortalLogin';
@@ -99,7 +99,7 @@ function Panel() {
 
   const color = ctx && ctx.colegio.color;
   // Logo del colegio; si no subió uno, el de Ulúa Media
-  const logoSrc = !ctx ? null : ctx.colegio.tiene_logo ? '/api/marca/' + ctx.colegio.id + '/logo' : '/logo-ulua-media.png';
+  const logoSrc = !ctx ? null : ctx.colegio.tiene_logo ? urlLogo(ctx.colegio.id) : '/logo-ulua-media.png';
   const items = NAV.filter((n) => (!n.modulo || !ctx || ctx.modulos[n.modulo] !== false) && (!n.soloProveedor || (ctx && ctx.es_proveedor)) && (!n.roles || (usuario && n.roles.includes(usuario.rol))));
   const suspendida = ctx && ctx.licencia.estado === 'suspendida' && !ctx.soporte && !ctx.es_proveedor;
 
@@ -108,13 +108,13 @@ function Panel() {
       {color && <style>{`button:not(.secondary){background:${color}} button:not(.secondary):hover{filter:brightness(.9)} .sidebar a.active{color:${color};background:${color}1a}`}</style>}
       <div className="barra-movil">
         <button type="button" className="secondary" aria-label="Abrir menú" onClick={() => setMenu(true)}><Menu size={20} /></button>
-        {logoSrc && <img src={logoSrc} alt="" className="h-8 w-auto max-w-[48px] object-contain" />}
+        {logoSrc && <img src={logoSrc} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/logo-ulua-media.png'; }} alt="" className="h-8 w-auto max-w-[48px] object-contain" />}
         <span className="font-semibold text-sm truncate">{ctx ? ctx.colegio.nombre : 'Campus Virtual'}</span>
       </div>
       {menu && <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMenu(false)} />}
       <aside className={'sidebar' + (menu ? ' abierto' : '')}>
         <div className="flex items-center gap-2 px-3 mb-5 mt-1">
-          {logoSrc && <img src={logoSrc} alt="" className="h-9 w-auto max-w-[56px] object-contain" />}
+          {logoSrc && <img src={logoSrc} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/logo-ulua-media.png'; }} alt="" className="h-9 w-auto max-w-[56px] object-contain" />}
           <h1 className="!block !px-0 !mb-0 !mt-0 whitespace-normal leading-tight">{ctx ? ctx.colegio.nombre : 'Campus Virtual'}</h1>
         </div>
         <nav className="flex flex-col gap-1 flex-1">
