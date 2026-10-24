@@ -9,7 +9,7 @@ function Marco({ titulo, children }) {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
-          <Link to="/inicio" className="font-semibold text-gray-900">Ulúa Campus</Link>
+          <Link to="/inicio" className="flex items-center gap-3 font-semibold text-gray-900"><img src="/logo-ulua-media.png" alt="Ulúa Media" style={{ height: 40, width: 'auto' }} /><span>Ulúa Campus</span></Link>
           <nav className="text-sm flex gap-4 text-blue-700">
             <Link to="/privacidad">Privacidad</Link><Link to="/terminos">Términos</Link><Link to="/login">Ingresar</Link>
           </nav>
