@@ -32,6 +32,12 @@ async function marcaDe(colegioId) {
 const ICONO = (n) => front() + '/iconos/' + n + '.png';
 const ETIQUETA = { facebook: 'Facebook', instagram: 'Instagram', x: 'X', linkedin: 'LinkedIn', youtube: 'YouTube' };
 
+/** Fila de íconos de redes en gris (fuera de la tarjeta) */
+function htmlRedes(redes) {
+  return REDES.filter((r) => redes && redes[r]).map((r) =>
+    `<td style="padding:0 5px"><a href="${escapar(redes[r])}" title="${ETIQUETA[r]}" style="text-decoration:none"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="30" height="30" align="center" valign="middle" style="width:30px;height:30px;background:#9ca3af;border-radius:15px"><img src="${ICONO(r)}" width="16" height="16" alt="${ETIQUETA[r]}" style="display:block;border:0"></td></tr></table></a></td>`).join('');
+}
+
 /** Tarjeta de firma: logo, nombre y cargo, redes y barra de color con ubicación, teléfono y web */
 function htmlFirma(f) {
   const c = f.color;
@@ -61,4 +67,4 @@ ${datos.length ? `<tr><td style="background:${c};padding:10px 6px"><table role="
 </table>`;
 }
 
-module.exports = { marcaDe, htmlFirma, ulua, CAMPOS, REDES, url };
+module.exports = { marcaDe, htmlFirma, htmlRedes, ulua, CAMPOS, REDES, url };
