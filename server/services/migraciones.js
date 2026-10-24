@@ -329,6 +329,8 @@ module.exports = async function migrar() {
       pagado_en TIMESTAMPTZ, usado_en TIMESTAMPTZ, usado_por VARCHAR(150), registrado_por VARCHAR(150), creado_en TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_boletos_evento ON boletos (evento_id, estado);
+    ALTER TABLE boletos ADD COLUMN IF NOT EXISTS alumno_id INTEGER REFERENCES alumnos(id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS idx_boletos_alumno ON boletos (alumno_id);
     ALTER TABLE colegios ADD COLUMN IF NOT EXISTS firma_nombre VARCHAR(120), ADD COLUMN IF NOT EXISTS firma_cargo VARCHAR(120),
       ADD COLUMN IF NOT EXISTS firma_direccion VARCHAR(200), ADD COLUMN IF NOT EXISTS firma_telefono VARCHAR(60), ADD COLUMN IF NOT EXISTS firma_web VARCHAR(200),
       ADD COLUMN IF NOT EXISTS firma_facebook VARCHAR(250), ADD COLUMN IF NOT EXISTS firma_instagram VARCHAR(250), ADD COLUMN IF NOT EXISTS firma_x VARCHAR(250),

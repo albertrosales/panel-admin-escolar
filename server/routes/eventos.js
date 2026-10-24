@@ -65,6 +65,18 @@ router.delete('/:id', soloFinanzas, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Boletos de un alumno (solo los pagados traen código para mostrar el QR; los pendientes se avisan sin código)
+router.get('/alumno/:alumnoId/boletos', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT b.id, CASE WHEN b.estado = 'pendiente' THEN NULL ELSE b.codigo END AS codigo, b.estado, b.comprador, b.correo, b.monto::float AS monto, b.usado_en,
+              e.id AS evento_id, e.nombre AS evento, to_char(e.fecha,'YYYY-MM-DD') AS fecha, e.hora, e.lugar
+       FROM boletos b JOIN eventos_entrada e ON e.id = b.evento_id
+       WHERE b.colegio_id = $1 AND b.alumno_id = $2 AND b.estado <> 'anulado' ORDER BY e.fecha DESC NULLS LAST, b.id DESC`, [req.colegioId, req.params.alumnoId]);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/:id/boletos', async (req, res) => {
   try {
     const p = [req.colegioId, req.params.id]; let w = 'colegio_id = $1 AND evento_id = $2';
@@ -99,6 +111,12 @@ router.post('/:id/boletos', puedeVender, async (req, res) => {
       const { rows: [v] } = await pool.query("SELECT COUNT(*)::int AS n FROM boletos WHERE evento_id = $1 AND estado <> 'anulado'", [ev.id]);
       if (v.n + cant > ev.capacidad) return res.status(400).json({ error: `Solo quedan ${Math.max(0, ev.capacidad - v.n)} boleto(s) disponibles` });
     }
+    let alumnoId = null;
+    if (b.alumno_id) {
+      const { rows: [al] } = await pool.query('SELECT id FROM alumnos WHERE id = $1 AND colegio_id = $2', [b.alumno_id, req.colegioId]);
+      if (!al) return res.status(400).json({ error: 'Alumno no encontrado' });
+      alumnoId = al.id;
+    }
     const cortesia = !!b.cortesia;
     const estado = b.estado === 'pendiente' && !cortesia ? 'pendiente' : 'pagado';
     const monto = cortesia ? 0 : Number(ev.precio);
@@ -106,9 +124,9 @@ router.post('/:id/boletos', puedeVender, async (req, res) => {
     const creados = [];
     for (let i = 0; i < cant; i++) {
       const { rows: [bo] } = await pool.query(
-        `INSERT INTO boletos (colegio_id, evento_id, codigo, venta, comprador, correo, telefono, monto, metodo, estado, pagado_en, registrado_por)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $10::varchar='pagado' THEN NOW() END, $11) RETURNING id, codigo, estado, monto::float AS monto`,
-        [req.colegioId, ev.id, nuevoCodigo(), venta, limpio(b.comprador, 150), limpio(b.correo, 150), limpio(b.telefono, 40), monto, cortesia ? 'Cortesía' : limpio(b.metodo, 30) || 'Efectivo', estado, req.usuario.correo]);
+        `INSERT INTO boletos (colegio_id, evento_id, codigo, venta, comprador, correo, telefono, monto, metodo, estado, pagado_en, registrado_por, alumno_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $10::varchar='pagado' THEN NOW() END, $11, $12) RETURNING id, codigo, estado, monto::float AS monto`,
+        [req.colegioId, ev.id, nuevoCodigo(), venta, limpio(b.comprador, 150), limpio(b.correo, 150), limpio(b.telefono, 40), monto, cortesia ? 'Cortesía' : limpio(b.metodo, 30) || 'Efectivo', estado, req.usuario.correo, alumnoId]);
       creados.push(bo);
     }
     let correo = null;

@@ -47,19 +47,30 @@ function FormEvento({ inicial, onGuardado, onCancelar }) {
 }
 
 function Vender({ evento, puedeCobrar, recargar, colegio }) {
-  const [f, setF] = useState({ comprador: '', correo: '', telefono: '', cantidad: 1, metodo: 'Efectivo', estado: 'pagado', cortesia: false, enviar_correo: true });
+  const [alumnos, setAlumnos] = useState([]);
+  useEffect(() => { api.alumnos.listar({}).then(setAlumnos).catch(() => {}); }, []);
+  const [f, setF] = useState({ alumno_id: '', comprador: '', correo: '', telefono: '', cantidad: 1, metodo: 'Efectivo', estado: 'pagado', cortesia: false, enviar_correo: true });
   const [res, setRes] = useState(null);
   const [msg, setMsg] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   async function vender(e) {
     e.preventDefault(); setMsg(''); setRes(null);
-    try { const r = await api.eventos.vender(evento.id, { ...f, enviar_correo: f.enviar_correo && !!f.correo }); setRes(r); recargar(); setF({ ...f, comprador: '', correo: '', telefono: '', cantidad: 1, cortesia: false }); } catch (err) { setMsg(err.message); }
+    try { const r = await api.eventos.vender(evento.id, { ...f, enviar_correo: f.enviar_correo && !!f.correo }); setRes(r); recargar(); setF({ ...f, alumno_id: '', comprador: '', correo: '', telefono: '', cantidad: 1, cortesia: false }); } catch (err) { setMsg(err.message); }
   }
   const total = f.cortesia ? 0 : evento.precio * (Number(f.cantidad) || 0);
   return (
     <div className="card">
       <h3>Vender boletos</h3>
       <form onSubmit={vender} className="grid sm:grid-cols-2 gap-3">
+        <label className="sm:col-span-2">Alumno (opcional: el boleto quedará en su ficha)
+          <select value={f.alumno_id} onChange={(e) => {
+            const a = alumnos.find((x) => String(x.id) === e.target.value);
+            setF(a ? { ...f, alumno_id: a.id, comprador: a.nombre_encargado || a.nombre_completo, correo: a.correo_encargado || a.correo_alumno || f.correo, telefono: a.telefono_encargado || a.telefono || f.telefono } : { ...f, alumno_id: '' });
+          }}>
+            <option value="">— Sin alumno (público general) —</option>
+            {alumnos.map((a) => <option key={a.id} value={a.id}>{a.nombre_completo}</option>)}
+          </select>
+        </label>
         <label>Nombre del comprador<input value={f.comprador} onChange={set('comprador')} /></label>
         <label>Cantidad<input type="number" min="1" max="100" value={f.cantidad} onChange={set('cantidad')} required /></label>
         <label>Correo (para enviarle el boleto)<input type="email" value={f.correo} onChange={set('correo')} /></label>

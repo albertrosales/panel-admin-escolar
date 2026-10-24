@@ -4,6 +4,7 @@ import { api, resolverUrlArchivo } from '../api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList, CartesianGrid } from 'recharts';
 import EstadoBadge from '../components/EstadoBadge';
 import SelectorClases from '../components/SelectorClases';
+import BoletosAlumno from '../components/BoletosAlumno';
 
 const COLEGIO_ID = 1;
 
@@ -344,6 +345,8 @@ export default function AlumnoDetalle() {
           </tbody>
         </table>
       </div>
+
+      <BoletosAlumno alumnoId={alumno.id} />
 
       <div className="card">
         <h3>Historial</h3>
