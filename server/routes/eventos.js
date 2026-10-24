@@ -5,6 +5,7 @@ const router = express.Router();
 const pool = require('../db');
 const { disponible, enviar } = require('../services/correo/mailer');
 const { htmlCorreo, escapar } = require('../services/correo/render');
+const { marcaDe } = require('../services/correo/firma');
 
 const FINANZAS = ['admin', 'director', 'superadmin'];
 const soloFinanzas = (req, res, next) => (FINANZAS.includes(req.usuario.rol) ? next() : res.status(403).json({ error: 'Solo dirección y administración pueden hacer esto' }));
@@ -81,9 +82,9 @@ async function correoBoletos({ colegioId, evento, colegioNombre, comprador, para
   const texto = `Hola${comprador ? ' ' + comprador : ''}:\n\nAdjuntamos ${boletos.length === 1 ? 'tu boleto' : 'tus ' + boletos.length + ' boletos'} para "${evento.nombre}".\n\n` +
     `${fecha ? 'Fecha: ' + fecha + (evento.hora ? ', ' + evento.hora : '') + '\n' : ''}${evento.lugar ? 'Lugar: ' + evento.lugar + '\n' : ''}\n` +
     `Presenta el código QR de cada boleto (impreso o en tu teléfono) en la entrada. Cada código se puede usar una sola vez.\n\n` + boletos.map((b) => 'Boleto: ' + b.codigo).join('\n') + `\n\n${colegioNombre}`;
-  const { rows: [c] } = await pool.query('SELECT correo_color, correo_logo_url, correo_pie FROM colegios WHERE id = $1', [colegioId]);
+  const marca = await marcaDe(colegioId);
   await enviar({ colegioId, nombreRemitente: colegioNombre, to: para, asunto: 'Tu boleto para ' + evento.nombre, texto,
-    html: htmlCorreo({ institucion: colegioNombre, color: c.correo_color, logo: c.correo_logo_url, pie: c.correo_pie }, texto), adjuntos: adj });
+    html: htmlCorreo(marca, texto), adjuntos: adj });
 }
 
 // Venta de boletos: se pagan al momento (o quedan pendientes) y cada uno recibe su propio código QR

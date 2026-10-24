@@ -252,7 +252,8 @@ export const api = {
   },
   colegio: {
     contexto: () => request('/colegio/contexto'),
-    guardarMarca: (d) => request('/colegio/marca', { method: 'PUT', body: JSON.stringify(d) })
+    guardarMarca: (d) => request('/colegio/marca', { method: 'PUT', body: JSON.stringify(d) }),
+    vistaFirma: () => request('/colegio/firma-vista')
   },
   proveedor: {
     resumen: () => request('/proveedor/resumen'),

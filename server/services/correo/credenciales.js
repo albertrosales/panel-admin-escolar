@@ -3,6 +3,7 @@ const { armar, cargarPlantilla } = require('./notificaciones');
 const { htmlCorreo } = require('./render');
 const { disponible, enviar } = require('./mailer');
 const mdl = require('../moodleService');
+const { marcaDe } = require('./firma');
 
 const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 const urlSistema = () => String(process.env.FRONTEND_URL || 'https://sistema.uluamedia.com').replace(/\/+$/, '');
@@ -17,8 +18,7 @@ async function enviarCredenciales({ colegioId, para, nombre, usuario, contrasena
   if (!(await disponible(colegioId))) return { enviado: false, motivo: 'El colegio no tiene correo de envío configurado (Configuración → Correo de envío)' };
   const { rows: [c] } = await pool.query('SELECT nombre, moodle_url, correo_color, correo_logo_url, correo_pie, (logo_data IS NOT NULL) AS tiene_logo FROM colegios WHERE id = $1', [colegioId]);
   const pl = await cargarPlantilla(colegioId, 'credenciales');
-  const marca = { institucion: c.nombre, color: c.correo_color, pie: c.correo_pie,
-    logo: c.tiene_logo ? (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || '') + '/api/marca/' + colegioId + '/logo' : c.correo_logo_url };
+  const marca = await marcaDe(colegioId);
   const vars = { nombre_institucion: c.nombre, nombre_destinatario: nombre, usuario, contrasena, enlace_moodle: urlMoodle(c.moodle_url), enlace_sistema: urlSistema() };
   const m = armar(pl, { vars, marca });
   let estado = 'enviado', error = null;

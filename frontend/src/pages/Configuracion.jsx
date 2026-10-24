@@ -25,6 +25,44 @@ function MiPlan({ ctx }) {
   );
 }
 
+function FirmaCorreo({ ctx, recargarCtx }) {
+  const [f, setF] = useState({ nombre: '', cargo: '', direccion: '', telefono: '', web: '', facebook: '', instagram: '', x: '', linkedin: '', youtube: '', ...(ctx.colegio.firma || {}) });
+  const [vista, setVista] = useState(null);
+  const [msg, setMsg] = useState('');
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const ver = () => api.colegio.vistaFirma().then(setVista).catch((e) => setMsg(e.message));
+  useEffect(() => { ver(); }, []);
+  async function guardar(e) {
+    e.preventDefault(); setMsg('');
+    try { await api.colegio.guardarMarca({ firma: f }); setMsg('Guardado.'); recargarCtx(); ver(); } catch (err) { setMsg(err.message); }
+  }
+  return (
+    <div className="card">
+      <h3>Firma de los correos</h3>
+      <p className="text-sm text-gray-500 mb-3">Al final de cada correo aparece una tarjeta con tu logo, el color de tu institución y estos datos. Si no completas ninguno, se muestra la información de Ulúa Media.</p>
+      <form onSubmit={guardar} className="grid sm:grid-cols-2 gap-3 max-w-2xl">
+        <label>Nombre que firma (ej. Dirección)<input value={f.nombre} onChange={set('nombre')} placeholder={ctx.colegio.nombre} /></label>
+        <label>Cargo o lema (opcional)<input value={f.cargo} onChange={set('cargo')} placeholder="Formando el futuro" /></label>
+        <label>Dirección<input value={f.direccion} onChange={set('direccion')} placeholder="Tocoa, Colón" /></label>
+        <label>Teléfono<input value={f.telefono} onChange={set('telefono')} placeholder="+504 0000-0000" /></label>
+        <label>Sitio web<input value={f.web} onChange={set('web')} placeholder="www.micolegio.com" /></label>
+        <label>Facebook (enlace)<input value={f.facebook} onChange={set('facebook')} placeholder="https://facebook.com/micolegio" /></label>
+        <label>Instagram (enlace)<input value={f.instagram} onChange={set('instagram')} placeholder="https://instagram.com/micolegio" /></label>
+        <label>X / Twitter (enlace)<input value={f.x} onChange={set('x')} /></label>
+        <label>LinkedIn (enlace)<input value={f.linkedin} onChange={set('linkedin')} /></label>
+        <label>YouTube (enlace)<input value={f.youtube} onChange={set('youtube')} /></label>
+        <div className="sm:col-span-2"><button type="submit">Guardar firma</button> {msg && <span className="text-sm text-gray-500 ml-2">{msg}</span>}</div>
+      </form>
+      {vista && (
+        <div className="mt-4">
+          <p className="text-sm font-medium mb-1">Así se ve tu correo{vista.usa_ulua ? ' (con la información de Ulúa Media, porque aún no agregas la tuya)' : ''}:</p>
+          <iframe title="Vista previa del correo" srcDoc={vista.html} className="w-full border border-gray-200 rounded-xl bg-white" style={{ height: 420 }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CorreoEnvio() {
   const [e, setE] = useState(null);
   const [msg, setMsg] = useState('');
@@ -152,6 +190,7 @@ export default function Configuracion({ ctx, recargarCtx }) {
       <h2>Configuración</h2>
       {ctx && <MiPlan ctx={ctx} />}
       {ctx && <Marca ctx={ctx} recargarCtx={recargarCtx} />}
+      {ctx && <FirmaCorreo ctx={ctx} recargarCtx={recargarCtx} />}
       <CorreoEnvio />
 
       <div className="card">

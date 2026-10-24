@@ -1,6 +1,7 @@
 const pool = require('../../db');
 const { render, renderAsunto, htmlCorreo } = require('./render');
 const { disponible, enviar } = require('./mailer');
+const { marcaDe } = require('./firma');
 const { PLANTILLAS, MANUAL_VARS, porClave } = require('./plantillasDefault');
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -51,7 +52,7 @@ async function variablesAlumno(alumnoId, { pagoId } = {}) {
     cantidad_ausencias: as && as.aus ? String(as.aus) : '', estado_asistencia: as && as.ultimo ? ESTADOS_ASIS[as.ultimo.trim()] : '',
     periodo_academico: String(new Date().getFullYear())
   };
-  return { alumno: a, vars, marca: { institucion: a.institucion, color: a.correo_color, logo: a.tiene_logo ? (process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'https://panel-admin-escolar.onrender.com') + '/api/marca/' + a.colegio_id + '/logo' : a.correo_logo_url, pie: a.correo_pie } };
+  return { alumno: a, vars, marca: await marcaDe(a.colegio_id) };
 }
 
 function armar(plantilla, ctx, extras) {

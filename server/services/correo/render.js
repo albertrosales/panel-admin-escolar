@@ -21,7 +21,7 @@ function renderAsunto(asunto, vars) {
 }
 
 /** Plantilla HTML adaptable a móvil con la identidad (color, logo, pie) de la institución */
-function htmlCorreo({ institucion, color, logo, pie }, texto) {
+function htmlCorreo({ institucion, color, logo, pie, firma }, texto) {
   const c = /^#[0-9a-f]{6}$/i.test(color || '') ? color : '#2455e6';
   const cuerpo = texto.split(/\n{2,}/).map((p) => `<p style="margin:0 0 16px;line-height:1.55">${escapar(p).replace(/\n/g, '<br>')}</p>`).join('');
   const cab = logo && /^https:\/\//.test(logo)
@@ -32,7 +32,8 @@ function htmlCorreo({ institucion, color, logo, pie }, texto) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:12px;overflow:hidden">
 <tr><td style="background:${c};padding:18px 24px">${cab}</td></tr>
 <tr><td style="padding:24px;font-size:15px">${cuerpo}</td></tr>
-<tr><td style="padding:14px 24px;background:#f9fafb;color:#6b7280;font-size:12px">${escapar(pie || 'Mensaje enviado por ' + institucion)}</td></tr>
+${firma ? `<tr><td style="padding:0 24px 20px">${require('./firma').htmlFirma(firma)}</td></tr>` : ''}
+<tr><td style="padding:12px 24px;background:#f9fafb;color:#6b7280;font-size:12px">${escapar(pie || 'Mensaje enviado por ' + institucion)}</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
