@@ -98,6 +98,8 @@ function Lista({ evento, puedeCobrar, recargar, colegio }) {
   const [filas, setFilas] = useState([]);
   const [q, setQ] = useState(''); const [estado, setEstado] = useState('');
   const [msg, setMsg] = useState('');
+  const [alumnos, setAlumnos] = useState([]);
+  useEffect(() => { api.alumnos.listar({}).then(setAlumnos).catch(() => {}); }, []);
   const cargar = () => api.eventos.boletos(evento.id, Object.fromEntries(Object.entries({ q, estado }).filter(([, v]) => v))).then(setFilas).catch((e) => setMsg(e.message));
   useEffect(() => { cargar(); }, [evento.id, estado]);
   const accion = async (fn) => { try { await fn(); await cargar(); recargar(); } catch (e) { setMsg(e.message); } };
@@ -116,7 +118,8 @@ function Lista({ evento, puedeCobrar, recargar, colegio }) {
           <tbody>
             {filas.map((b) => (
               <tr key={b.id}>
-                <td className="font-mono text-xs">{b.codigo}</td><td>{b.comprador || '—'}{b.correo && <div className="text-xs text-gray-500">{b.correo}</div>}</td>
+                <td className="font-mono text-xs">{b.codigo}</td><td>{b.comprador || '—'}{b.correo && <div className="text-xs text-gray-500">{b.correo}</div>}
+                  {b.estado !== 'anulado' && <select className="mt-1 !py-1 !text-xs max-w-[190px]" value={b.alumno_id || ''} onChange={(e) => accion(() => api.eventos.asignarAlumno(b.id, e.target.value || null))}><option value="">Alumno: ninguno</option>{alumnos.map((a) => <option key={a.id} value={a.id}>{a.nombre_completo}</option>)}</select>}</td>
                 <td><span className={'badge ' + ESTADO[b.estado][1]}>{ESTADO[b.estado][0]}</span></td><td className="text-right">{L(b.monto)}</td>
                 <td className="whitespace-nowrap">
                   {b.estado !== 'anulado' && <button className="secondary" onClick={async () => {

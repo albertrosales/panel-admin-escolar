@@ -82,7 +82,7 @@ router.get('/:id/boletos', async (req, res) => {
     const p = [req.colegioId, req.params.id]; let w = 'colegio_id = $1 AND evento_id = $2';
     if (req.query.estado) { p.push(req.query.estado); w += ' AND estado = $' + p.length; }
     if (req.query.q) { p.push('%' + req.query.q + '%'); w += ` AND (comprador ILIKE $${p.length} OR codigo ILIKE $${p.length} OR correo ILIKE $${p.length})`; }
-    const { rows } = await pool.query(`SELECT id, codigo, venta, comprador, correo, telefono, monto::float AS monto, metodo, estado, pagado_en, usado_en FROM boletos WHERE ${w} ORDER BY id DESC LIMIT 1000`, p);
+    const { rows } = await pool.query(`SELECT id, codigo, venta, comprador, correo, telefono, monto::float AS monto, metodo, estado, pagado_en, usado_en, alumno_id, (SELECT nombre_completo FROM alumnos WHERE id = boletos.alumno_id) AS alumno FROM boletos WHERE ${w} ORDER BY id DESC LIMIT 1000`, p);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -142,6 +142,21 @@ router.post('/:id/boletos', puedeVender, async (req, res) => {
       }
     }
     res.status(201).json({ venta, boletos: creados, total: monto * cant, correo });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Ligar (o quitar) un boleto a un alumno para que aparezca en su ficha y en su portal
+router.post('/boletos/:id/alumno', puedeVender, async (req, res) => {
+  try {
+    let alumnoId = null;
+    if (req.body.alumno_id) {
+      const { rows: [al] } = await pool.query('SELECT id FROM alumnos WHERE id = $1 AND colegio_id = $2', [req.body.alumno_id, req.colegioId]);
+      if (!al) return res.status(400).json({ error: 'Alumno no encontrado' });
+      alumnoId = al.id;
+    }
+    const u = await pool.query('UPDATE boletos SET alumno_id = $3 WHERE id = $1 AND colegio_id = $2', [req.params.id, req.colegioId, alumnoId]);
+    if (!u.rowCount) return res.status(404).json({ error: 'Boleto no encontrado' });
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

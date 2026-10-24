@@ -331,6 +331,10 @@ module.exports = async function migrar() {
     CREATE INDEX IF NOT EXISTS idx_boletos_evento ON boletos (evento_id, estado);
     ALTER TABLE boletos ADD COLUMN IF NOT EXISTS alumno_id INTEGER REFERENCES alumnos(id) ON DELETE SET NULL;
     CREATE INDEX IF NOT EXISTS idx_boletos_alumno ON boletos (alumno_id);
+    UPDATE boletos b SET alumno_id = a.id FROM alumnos a
+      WHERE b.alumno_id IS NULL AND a.colegio_id = b.colegio_id AND b.comprador IS NOT NULL
+        AND lower(btrim(a.nombre_completo)) = lower(btrim(b.comprador))
+        AND (SELECT COUNT(*) FROM alumnos x WHERE x.colegio_id = a.colegio_id AND lower(btrim(x.nombre_completo)) = lower(btrim(b.comprador))) = 1;
     ALTER TABLE colegios ADD COLUMN IF NOT EXISTS firma_nombre VARCHAR(120), ADD COLUMN IF NOT EXISTS firma_cargo VARCHAR(120),
       ADD COLUMN IF NOT EXISTS firma_direccion VARCHAR(200), ADD COLUMN IF NOT EXISTS firma_telefono VARCHAR(60), ADD COLUMN IF NOT EXISTS firma_web VARCHAR(200),
       ADD COLUMN IF NOT EXISTS firma_facebook VARCHAR(250), ADD COLUMN IF NOT EXISTS firma_instagram VARCHAR(250), ADD COLUMN IF NOT EXISTS firma_x VARCHAR(250),
