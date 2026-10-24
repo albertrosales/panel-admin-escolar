@@ -292,5 +292,16 @@ module.exports = async function migrar() {
       PRIMARY KEY (grado_id, parcial)
     );
     ALTER TABLE colegios ADD COLUMN IF NOT EXISTS gmail_refresh_token TEXT, ADD COLUMN IF NOT EXISTS gmail_correo VARCHAR(150);
+    CREATE TABLE IF NOT EXISTS gasto_categorias (
+      id SERIAL PRIMARY KEY, colegio_id INTEGER NOT NULL REFERENCES colegios(id) ON DELETE CASCADE,
+      nombre VARCHAR(80) NOT NULL, creada_en TIMESTAMPTZ DEFAULT NOW(), UNIQUE (colegio_id, nombre)
+    );
+    CREATE TABLE IF NOT EXISTS gastos (
+      id SERIAL PRIMARY KEY, colegio_id INTEGER NOT NULL REFERENCES colegios(id) ON DELETE CASCADE,
+      fecha DATE NOT NULL, categoria VARCHAR(80) NOT NULL, descripcion TEXT NOT NULL, monto NUMERIC(12,2) NOT NULL CHECK (monto > 0),
+      proveedor VARCHAR(150), metodo VARCHAR(30), referencia VARCHAR(80), nota TEXT,
+      registrado_por VARCHAR(150), creado_en TIMESTAMPTZ DEFAULT NOW(), actualizado_en TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_gastos_colegio_fecha ON gastos (colegio_id, fecha DESC);
   `);
 };

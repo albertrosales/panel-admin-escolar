@@ -155,6 +155,15 @@ export const api = {
     asignarSeccion: (id, seccion) => request('/grados/' + id, { method: 'PATCH', body: JSON.stringify({ seccion }) }),
     listarCategoriasMoodle: (params) => request('/grados/categorias-moodle?' + new URLSearchParams(params))
   },
+  gastos: {
+    listar: (q) => request('/gastos?' + new URLSearchParams(q || {})),
+    categorias: () => request('/gastos/categorias'),
+    crearCategoria: (nombre) => request('/gastos/categorias', { method: 'POST', body: JSON.stringify({ nombre }) }),
+    borrarCategoria: (id) => request('/gastos/categorias/' + id, { method: 'DELETE' }),
+    crear: (d) => request('/gastos', { method: 'POST', body: JSON.stringify(d) }),
+    editar: (id, d) => request('/gastos/' + id, { method: 'PUT', body: JSON.stringify(d) }),
+    borrar: (id) => request('/gastos/' + id, { method: 'DELETE' })
+  },
   correoEnvio: {
     estado: () => request('/correo-oauth/estado'),
     iniciar: () => request('/correo-oauth/iniciar'),

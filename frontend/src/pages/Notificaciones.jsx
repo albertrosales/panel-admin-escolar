@@ -57,6 +57,7 @@ function Enviar({ plantillas, info }) {
         <h3>1. Plantilla</h3>
         <select value={clave} onChange={(e) => elegir(e.target.value)}>
           <option value="">Selecciona una plantilla...</option>
+          <option value="libre">✍️ Mensaje libre: escribo yo el asunto y el mensaje</option>
           {['Pagos', 'Asistencia', 'Académico', 'Dirección'].map((g) => (
             <optgroup key={g} label={g}>{plantillas.filter((p) => p.grupo === g).map((p) => <option key={p.clave} value={p.clave}>{p.nombre}</option>)}</optgroup>
           ))}
@@ -65,7 +66,7 @@ function Enviar({ plantillas, info }) {
           <div className="flex flex-col gap-3 mt-3">
             <label>Asunto<input value={asunto} onChange={(e) => setAsunto(e.target.value)} /></label>
             <label>Mensaje<textarea rows="9" value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} /></label>
-            <p className="text-xs text-gray-500">Las variables como {'{{nombre_alumno}}'} se completan solas con los datos de cada alumno. Los cambios aquí aplican solo a este envío.</p>
+            <p className="text-xs text-gray-500">{clave === 'libre' ? 'Escribe lo que quieras. ' : ''}Puedes usar {'{{nombre_alumno}}'}, {'{{codigo_alumno}}'}, {'{{grado}}'} y {'{{nombre_institucion}}'}: se completan solas con los datos de cada alumno. {clave === 'libre' ? '' : 'Los cambios aquí aplican solo a este envío.'}</p>
             {manuales.length > 0 && (
               <div className="grid sm:grid-cols-2 gap-3">
                 {manuales.map((v) => (
