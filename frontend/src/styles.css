@@ -12,10 +12,11 @@
   .layout { @apply flex flex-col md:flex-row min-h-screen; }
 
   .sidebar {
-    @apply w-full md:w-60 flex flex-row md:flex-col items-center md:items-stretch
-           gap-1 border-b md:border-b-0 md:border-r border-gray-200 bg-gray-50
-           px-3 md:px-4 py-2 md:py-7 overflow-x-auto;
+    @apply fixed md:static inset-y-0 left-0 z-50 w-64 md:w-60 flex flex-col items-stretch gap-1
+           border-r border-gray-200 bg-gray-50 px-4 py-5 md:py-7 overflow-y-auto
+           -translate-x-full md:translate-x-0 transition-transform duration-200;
   }
+  .sidebar.abierto { @apply translate-x-0 shadow-2xl md:shadow-none; }
   .sidebar h1 { @apply hidden md:block text-sm font-semibold px-3 mb-5 mt-1 whitespace-nowrap; }
   .sidebar a {
     @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium
@@ -24,10 +25,10 @@
   }
   .sidebar a.active { @apply text-blue-600 bg-blue-50; }
 
-  .content { @apply flex-1 px-6 md:px-12 py-6 md:py-10 max-w-5xl w-full; }
+  .content { @apply flex-1 min-w-0 px-4 md:px-12 py-4 md:py-10 max-w-5xl w-full; }
   .content h2 { @apply text-xl font-semibold mb-5 tracking-tight; }
 
-  .card { @apply bg-white border border-gray-200 rounded-xl shadow-sm p-6 mb-5; }
+  .card { @apply bg-white border border-gray-200 rounded-xl shadow-sm p-4 md:p-6 mb-4 md:mb-5; }
   .card h3, .card h4 { @apply text-sm font-semibold mb-3; }
 
   table { @apply w-full border-collapse; }
@@ -1014,3 +1015,23 @@
 
 .login-card h2 { font-weight:800; }
 .support-button { text-decoration:none; box-sizing:border-box; }
+
+
+/* ---- Teléfonos: tablas con desplazamiento, campos legibles y botones cómodos ---- */
+@media (max-width: 767px) {
+  html, body { overflow-x: hidden; }
+  .content h2 { font-size: 1.25rem; margin-bottom: .9rem; }
+  .card { overflow-x: auto; }
+  .card table { min-width: 540px; }
+  input, select, textarea { font-size: 16px !important; max-width: 100%; min-height: 42px; }
+  button { min-height: 40px; }
+  .card form.flex > label, .card form.flex > input, .card form.flex > select { flex: 1 1 100%; max-width: 100% !important; }
+  .card .flex.flex-wrap > input, .card .flex.flex-wrap > select { flex: 1 1 140px; }
+  .stats-row { gap: .75rem; }
+  img, video, canvas { max-width: 100%; }
+}
+.barra-movil { display: none; }
+@media (max-width: 767px) {
+  .barra-movil { display: flex; position: sticky; top: 0; z-index: 30; align-items: center; gap: .6rem; padding: .6rem 4.2rem .6rem .75rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
+  .barra-movil button { padding: .45rem .6rem; }
+}

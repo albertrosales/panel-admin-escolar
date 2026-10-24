@@ -134,6 +134,23 @@ router.post('/boletos/:id/pagar', puedeVender, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Reenviar un boleto por correo (a otra dirección si hace falta)
+router.post('/boletos/:id/enviar', puedeVender, async (req, res) => {
+  try {
+    const { rows: [b] } = await pool.query(`SELECT b.id, b.codigo, b.comprador, b.correo, b.estado, b.evento_id FROM boletos b WHERE b.id = $1 AND b.colegio_id = $2`, [req.params.id, req.colegioId]);
+    if (!b) return res.status(404).json({ error: 'Boleto no encontrado' });
+    if (b.estado === 'anulado') return res.status(400).json({ error: 'El boleto está anulado' });
+    const para = limpio(req.body.correo, 150) || b.correo;
+    if (!para || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(para)) return res.status(400).json({ error: 'Escribe un correo válido' });
+    if (!(await disponible(req.colegioId))) return res.status(400).json({ error: 'El colegio no tiene correo de envío conectado (Configuración → Correo de envío)' });
+    const { rows: [ev] } = await pool.query(`SELECT nombre, to_char(fecha,'YYYY-MM-DD') AS fecha, hora, lugar FROM eventos_entrada WHERE id = $1`, [b.evento_id]);
+    const { rows: [c] } = await pool.query('SELECT nombre FROM colegios WHERE id = $1', [req.colegioId]);
+    await correoBoletos({ colegioId: req.colegioId, evento: ev, colegioNombre: c.nombre, comprador: b.comprador, para, boletos: [b] });
+    if (!b.correo) await pool.query('UPDATE boletos SET correo = $2 WHERE id = $1', [b.id, para]);
+    res.json({ ok: true, para });
+  } catch (e) { res.status(500).json({ error: 'No se pudo enviar: ' + e.message }); }
+});
+
 router.post('/boletos/:id/anular', soloFinanzas, async (req, res) => {
   try {
     const u = await pool.query(`UPDATE boletos SET estado='anulado' WHERE id=$1 AND colegio_id=$2 AND estado IN ('pendiente','pagado')`, [req.params.id, req.colegioId]);

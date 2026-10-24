@@ -182,6 +182,7 @@ export const api = {
     boletos: (id, q) => request('/eventos/' + id + '/boletos?' + new URLSearchParams(q || {})),
     vender: (id, d) => request('/eventos/' + id + '/boletos', { method: 'POST', body: JSON.stringify(d) }),
     pagar: (bid, d) => request('/eventos/boletos/' + bid + '/pagar', { method: 'POST', body: JSON.stringify(d || {}) }),
+    enviarBoleto: (bid, correo) => request('/eventos/boletos/' + bid + '/enviar', { method: 'POST', body: JSON.stringify({ correo }) }),
     anular: (bid) => request('/eventos/boletos/' + bid + '/anular', { method: 'POST' }),
     escanear: (codigo, evento_id) => request('/eventos/escanear', { method: 'POST', body: JSON.stringify({ codigo, evento_id }) })
   },

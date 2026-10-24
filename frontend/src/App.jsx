@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText, Wallet, Ticket } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText, Wallet, Ticket, Menu } from 'lucide-react';
 import { api, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
 import Login from './pages/Login';
 import { Inicio, Privacidad, Terminos } from './pages/Publico';
@@ -89,6 +89,7 @@ function Aviso({ ctx }) {
 function Panel() {
   const usuario = obtenerUsuario();
   const [cal, setCal] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [ctx, setCtx] = useState(null);
   const [errorCtx, setErrorCtx] = useState('');
   const cargarCtx = () => api.colegio.contexto().then(setCtx).catch((e) => setErrorCtx(e.message));
@@ -103,19 +104,24 @@ function Panel() {
   return (
     <div className="layout">
       {color && <style>{`button:not(.secondary){background:${color}} button:not(.secondary):hover{filter:brightness(.9)} .sidebar a.active{color:${color};background:${color}1a}`}</style>}
-      <aside className="sidebar">
-        <div className="hidden md:flex items-center gap-2 px-3 mb-5 mt-1">
+      <div className="barra-movil">
+        <button type="button" className="secondary" aria-label="Abrir menú" onClick={() => setMenu(true)}><Menu size={20} /></button>
+        <span className="font-semibold text-sm truncate">{ctx ? ctx.colegio.nombre : 'Campus Virtual'}</span>
+      </div>
+      {menu && <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMenu(false)} />}
+      <aside className={'sidebar' + (menu ? ' abierto' : '')}>
+        <div className="flex items-center gap-2 px-3 mb-5 mt-1">
           {ctx && ctx.colegio.tiene_logo && <img src={'/api/marca/' + ctx.colegio.id + '/logo'} alt="" className="h-8 w-auto max-w-[44px] object-contain" />}
           <h1 className="!block !px-0 !mb-0 !mt-0 whitespace-normal leading-tight">{ctx ? ctx.colegio.nombre : 'Campus Virtual'}</h1>
         </div>
-        <nav className="flex md:flex-col gap-1 flex-1">
+        <nav className="flex flex-col gap-1 flex-1">
           {items.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end}>
-              <n.icon size={17} strokeWidth={2} /> <span className="hidden sm:inline">{n.label}</span>
+            <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setMenu(false)}>
+              <n.icon size={17} strokeWidth={2} /> <span>{n.label}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="mt-auto pt-6 hidden md:block">
+        <div className="mt-auto pt-6">
           {usuario && <p className="text-xs text-gray-500 px-3 mb-2">{usuario.nombre}</p>}
           <button className="secondary w-full flex items-center justify-center gap-2" onClick={salir}>
             <LogOut size={15} /> Cerrar sesión

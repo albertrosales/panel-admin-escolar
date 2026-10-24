@@ -47,13 +47,13 @@ function FormEvento({ inicial, onGuardado, onCancelar }) {
 }
 
 function Vender({ evento, puedeCobrar, recargar, colegio }) {
-  const [f, setF] = useState({ comprador: '', correo: '', telefono: '', cantidad: 1, metodo: 'Efectivo', estado: 'pagado', cortesia: false, enviar_correo: false });
+  const [f, setF] = useState({ comprador: '', correo: '', telefono: '', cantidad: 1, metodo: 'Efectivo', estado: 'pagado', cortesia: false, enviar_correo: true });
   const [res, setRes] = useState(null);
   const [msg, setMsg] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   async function vender(e) {
     e.preventDefault(); setMsg(''); setRes(null);
-    try { const r = await api.eventos.vender(evento.id, f); setRes(r); recargar(); setF({ ...f, comprador: '', correo: '', telefono: '', cantidad: 1, cortesia: false }); } catch (err) { setMsg(err.message); }
+    try { const r = await api.eventos.vender(evento.id, { ...f, enviar_correo: f.enviar_correo && !!f.correo }); setRes(r); recargar(); setF({ ...f, comprador: '', correo: '', telefono: '', cantidad: 1, cortesia: false }); } catch (err) { setMsg(err.message); }
   }
   const total = f.cortesia ? 0 : evento.precio * (Number(f.cantidad) || 0);
   return (
@@ -67,7 +67,7 @@ function Vender({ evento, puedeCobrar, recargar, colegio }) {
         <label>Método de pago<select value={f.metodo} onChange={set('metodo')}><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option></select></label>
         <label>Estado<select value={f.estado} onChange={set('estado')}><option value="pagado">Pagado ahora</option><option value="pendiente">Reservado (paga después)</option></select></label>
         <label className="!flex-row items-center gap-2"><input type="checkbox" className="w-auto" checked={f.cortesia} onChange={set('cortesia')} /> Cortesía (sin costo)</label>
-        <label className="!flex-row items-center gap-2"><input type="checkbox" className="w-auto" checked={f.enviar_correo} onChange={set('enviar_correo')} disabled={!f.correo} /> Enviar boletos por correo</label>
+        <label className="!flex-row items-center gap-2"><input type="checkbox" className="w-auto" checked={f.enviar_correo} onChange={set('enviar_correo')} disabled={!f.correo} /> Enviar los boletos a ese correo</label>
         <div className="sm:col-span-2 flex items-center gap-3"><button type="submit">Generar boleto(s)</button><span className="text-sm">Total: <strong>{L(total)}</strong></span></div>
       </form>
       {msg && <p className="text-sm text-red-600 mt-2">{msg}</p>}
@@ -108,6 +108,10 @@ function Lista({ evento, puedeCobrar, recargar, colegio }) {
                 <td className="font-mono text-xs">{b.codigo}</td><td>{b.comprador || '—'}{b.correo && <div className="text-xs text-gray-500">{b.correo}</div>}</td>
                 <td><span className={'badge ' + ESTADO[b.estado][1]}>{ESTADO[b.estado][0]}</span></td><td className="text-right">{L(b.monto)}</td>
                 <td className="whitespace-nowrap">
+                  {b.estado !== 'anulado' && <button className="secondary" onClick={async () => {
+                    const c = window.prompt('¿A qué correo enviar este boleto?', b.correo || ''); if (!c) return;
+                    try { await api.eventos.enviarBoleto(b.id, c.trim()); setMsg('Boleto enviado a ' + c.trim()); cargar(); } catch (e) { setMsg(e.message); }
+                  }}>Enviar por correo</button>}{' '}
                   {b.estado === 'pendiente' && <button className="secondary" onClick={() => accion(() => api.eventos.pagar(b.id))}>Confirmar pago</button>}{' '}
                   {puedeCobrar && ['pendiente', 'pagado'].includes(b.estado) && <button className="secondary" onClick={() => window.confirm('¿Anular este boleto? Dejará de ser válido y no contará como ingreso.') && accion(() => api.eventos.anular(b.id))}>Anular</button>}
                 </td>
