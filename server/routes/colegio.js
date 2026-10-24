@@ -7,9 +7,9 @@ const L = require('../services/licencias');
 router.get('/contexto', async (req, res) => {
   try {
     const c = await L.cargarColegio(req.colegioId);
-    const { rows: [m] } = await pool.query('SELECT nombre, correo_color, correo_pie, (logo_data IS NOT NULL) AS tiene_logo FROM colegios WHERE id = $1', [req.colegioId]);
+    const { rows: [m] } = await pool.query('SELECT nombre, correo_color, correo_pie, (logo_data IS NOT NULL) AS tiene_logo, substr(md5(logo_data), 1, 10) AS logo_v FROM colegios WHERE id = $1', [req.colegioId]);
     res.json({
-      colegio: { id: c.id, nombre: m.nombre, color: m.correo_color || '#2455e6', pie: m.correo_pie, tiene_logo: m.tiene_logo },
+      colegio: { id: c.id, nombre: m.nombre, color: m.correo_color || '#2455e6', pie: m.correo_pie, tiene_logo: m.tiene_logo, logo_v: m.logo_v },
       licencia: L.estadoLicencia(c),
       plan: { nombre: c.plan_nombre || null, limites: L.limites(c) },
       uso: await L.uso(req.colegioId),

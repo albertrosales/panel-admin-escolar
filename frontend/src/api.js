@@ -1,6 +1,6 @@
 const BASE = import.meta.env.VITE_API_URL || '/api';
 // Dirección pública del logo de un colegio (el API puede estar en otro dominio que el sitio)
-export const urlLogo = (id) => BASE + '/marca/' + id + '/logo';
+export const urlLogo = (id, v) => BASE + '/marca/' + id + '/logo' + (v ? '?v=' + v : '');
 const ORIGIN = BASE.replace(/\/api\/?$/, '');
 
 export function resolverUrlArchivo(url) {

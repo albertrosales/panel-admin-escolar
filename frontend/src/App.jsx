@@ -99,7 +99,7 @@ function Panel() {
 
   const color = ctx && ctx.colegio.color;
   // Logo del colegio; si no subió uno, el de Ulúa Media
-  const logoSrc = !ctx ? null : ctx.colegio.tiene_logo ? urlLogo(ctx.colegio.id) : '/logo-ulua-media.png';
+  const logoSrc = !ctx ? null : ctx.colegio.tiene_logo ? urlLogo(ctx.colegio.id, ctx.colegio.logo_v) : '/logo-ulua-media.png';
   const items = NAV.filter((n) => (!n.modulo || !ctx || ctx.modulos[n.modulo] !== false) && (!n.soloProveedor || (ctx && ctx.es_proveedor)) && (!n.roles || (usuario && n.roles.includes(usuario.rol))));
   const suspendida = ctx && ctx.licencia.estado === 'suspendida' && !ctx.soporte && !ctx.es_proveedor;
 
