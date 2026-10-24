@@ -9,7 +9,7 @@ function Marco({ titulo, children }) {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
-          <Link to="/inicio" className="font-semibold text-gray-900">ulúa Campus</Link>
+          <Link to="/inicio" className="font-semibold text-gray-900">Ulúa Campus</Link>
           <nav className="text-sm flex gap-4 text-blue-700">
             <Link to="/privacidad">Privacidad</Link><Link to="/terminos">Términos</Link><Link to="/login">Ingresar</Link>
           </nav>
@@ -28,8 +28,8 @@ function Marco({ titulo, children }) {
 
 export function Inicio() {
   return (
-    <Marco titulo="ulúa Campus">
-      <p><strong>ulúa Campus</strong> es una plataforma de administración escolar de <strong>ulúa Media</strong> para colegios de Honduras. Integra con Moodle para ofrecer clases virtuales.</p>
+    <Marco titulo="Ulúa Campus">
+      <p><strong>Ulúa Campus</strong> es una plataforma de administración escolar de <strong>ulúa Media</strong> para colegios de Honduras. Integra con Moodle para ofrecer clases virtuales.</p>
       <h2>Qué hace</h2>
       <ul>
         <li>Registro de alumnos, docentes y clases.</li>
