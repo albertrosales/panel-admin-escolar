@@ -164,6 +164,27 @@ export const api = {
     editar: (id, d) => request('/gastos/' + id, { method: 'PUT', body: JSON.stringify(d) }),
     borrar: (id) => request('/gastos/' + id, { method: 'DELETE' })
   },
+  ingresos: {
+    listar: (q) => request('/ingresos?' + new URLSearchParams(q || {})),
+    categorias: () => request('/ingresos/categorias'),
+    crearCategoria: (nombre) => request('/ingresos/categorias', { method: 'POST', body: JSON.stringify({ nombre }) }),
+    borrarCategoria: (id) => request('/ingresos/categorias/' + id, { method: 'DELETE' }),
+    crear: (d) => request('/ingresos', { method: 'POST', body: JSON.stringify(d) }),
+    editar: (id, d) => request('/ingresos/' + id, { method: 'PUT', body: JSON.stringify(d) }),
+    borrar: (id) => request('/ingresos/' + id, { method: 'DELETE' })
+  },
+  finanzas: { resumen: (q) => request('/finanzas/resumen?' + new URLSearchParams(q || {})) },
+  eventos: {
+    listar: () => request('/eventos'),
+    crear: (d) => request('/eventos', { method: 'POST', body: JSON.stringify(d) }),
+    editar: (id, d) => request('/eventos/' + id, { method: 'PUT', body: JSON.stringify(d) }),
+    borrar: (id) => request('/eventos/' + id, { method: 'DELETE' }),
+    boletos: (id, q) => request('/eventos/' + id + '/boletos?' + new URLSearchParams(q || {})),
+    vender: (id, d) => request('/eventos/' + id + '/boletos', { method: 'POST', body: JSON.stringify(d) }),
+    pagar: (bid, d) => request('/eventos/boletos/' + bid + '/pagar', { method: 'POST', body: JSON.stringify(d || {}) }),
+    anular: (bid) => request('/eventos/boletos/' + bid + '/anular', { method: 'POST' }),
+    escanear: (codigo, evento_id) => request('/eventos/escanear', { method: 'POST', body: JSON.stringify({ codigo, evento_id }) })
+  },
   correoEnvio: {
     estado: () => request('/correo-oauth/estado'),
     iniciar: () => request('/correo-oauth/iniciar'),

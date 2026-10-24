@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 
 const fh = (d) => new Date(d).toLocaleString('es-HN', { dateStyle: 'short', timeStyle: 'medium' });
-const ENTIDADES = ['alumnos', 'profesores', 'grados', 'pagos', 'gastos', 'comprobantes', 'conciliacion', 'matriculas', 'asistencia', 'correos', 'admin', 'colegio', 'auth', 'soporte'];
+const ENTIDADES = ['alumnos', 'profesores', 'grados', 'pagos', 'gastos', 'ingresos', 'eventos', 'comprobantes', 'conciliacion', 'matriculas', 'asistencia', 'correos', 'admin', 'colegio', 'auth', 'soporte'];
 
 export default function Auditoria() {
   const [f, setF] = useState({ desde: '', hasta: '', usuario: '', entidad: '', q: '' });

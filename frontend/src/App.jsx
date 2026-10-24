@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText, Wallet, Ticket } from 'lucide-react';
 import { api, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
 import Login from './pages/Login';
 import { Inicio, Privacidad, Terminos } from './pages/Publico';
@@ -24,7 +24,8 @@ import Matricula from './pages/Matricula';
 import Asistencia from './pages/Asistencia';
 import Soporte from './pages/Soporte';
 import Auditoria from './pages/Auditoria';
-import Gastos from './pages/Gastos';
+import Finanzas from './pages/Finanzas';
+import Eventos from './pages/Eventos';
 import Proveedor from './pages/Proveedor';
 import Calendario from './components/Calendario';
 
@@ -44,7 +45,8 @@ const NAV = [
   { to: '/profesores', label: 'Profesores', icon: GraduationCap },
   { to: '/grados', label: 'Clases', icon: BookOpen },
   { to: '/comprobantes', label: 'Comprobantes', icon: Receipt, modulo: 'comprobantes' },
-  { to: '/gastos', label: 'Gastos', icon: Wallet, roles: ['admin', 'director', 'superadmin'] },
+  { to: '/finanzas', label: 'Finanzas', icon: Wallet, roles: ['admin', 'director', 'superadmin'] },
+  { to: '/eventos', label: 'Eventos y boletos', icon: Ticket, roles: ['admin', 'director', 'superadmin', 'secretaria'] },
   { to: '/conciliacion', label: 'Estado de cuenta', icon: Landmark, modulo: 'conciliacion' },
   { to: '/matricula', label: 'Matrícula', icon: FileCheck, modulo: 'matricula' },
   { to: '/notificaciones', label: 'Notificaciones', icon: Mail, modulo: 'notificaciones' },
@@ -145,7 +147,9 @@ function Panel() {
             <Route path="/matricula" element={<Matricula />} />
             <Route path="/notificaciones" element={<Notificaciones />} />
             <Route path="/asistencia" element={<Asistencia />} />
-            <Route path="/gastos" element={<Gastos />} />
+            <Route path="/finanzas" element={<Finanzas />} />
+            <Route path="/gastos" element={<Navigate to="/finanzas" replace />} />
+            <Route path="/eventos" element={<Eventos ctx={ctx} />} />
             <Route path="/auditoria" element={<Auditoria />} />
             <Route path="/soporte" element={<Soporte esProveedor={!!(ctx && ctx.es_proveedor)} />} />
             <Route path="/configuracion" element={<Configuracion ctx={ctx} recargarCtx={cargarCtx} />} />
