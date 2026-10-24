@@ -97,6 +97,19 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Boletos de eventos del alumno autenticado (el QR solo se entrega cuando ya está pagado)
+router.get('/boletos', requirePortal, async (req, res) => {
+  try {
+    if (req.portal.tipo !== 'alumno') return res.json([]);
+    const { rows } = await pool.query(
+      `SELECT b.id, CASE WHEN b.estado = 'pendiente' THEN NULL ELSE b.codigo END AS codigo, b.estado, b.usado_en,
+              e.nombre AS evento, to_char(e.fecha,'YYYY-MM-DD') AS fecha, e.hora, e.lugar
+       FROM boletos b JOIN eventos_entrada e ON e.id = b.evento_id
+       WHERE b.alumno_id = $1 AND b.colegio_id = $2 AND b.estado <> 'anulado' ORDER BY e.fecha DESC NULLS LAST, b.id DESC`, [req.portal.id, req.portal.colegio_id]);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Datos propios del alumno o profesor autenticado
 router.get('/me', requirePortal, async (req, res) => {
   try {

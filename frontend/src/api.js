@@ -144,6 +144,7 @@ export const api = {
     login: (username, password, colegio_id) =>
       requestPortal('/portal/login', { method: 'POST', body: JSON.stringify({ username, password, colegio_id }) }),
     me: () => requestPortal('/portal/me'),
+    boletos: () => requestPortal('/portal/boletos'),
     subirComprobante: (imagen, codigo) => requestPortal('/portal-comprobantes', { method: 'POST', body: JSON.stringify({ imagen, codigo }) }),
     verificarCodigo: (codigo) => requestPortal('/portal-comprobantes/codigo/' + encodeURIComponent(codigo)),
     misComprobantes: () => requestPortal('/portal-comprobantes'),

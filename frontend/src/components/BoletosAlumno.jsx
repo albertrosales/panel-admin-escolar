@@ -12,18 +12,20 @@ function Qr({ codigo }) {
 }
 
 /** Boletos de eventos del alumno: los pagados muestran su QR; los pendientes avisan que falta el pago */
-export default function BoletosAlumno({ alumnoId }) {
+export default function BoletosAlumno({ alumnoId, cargar, portal, filas: filasProp }) {
   const [filas, setFilas] = useState(null);
   const [msg, setMsg] = useState('');
-  useEffect(() => { api.eventos.deAlumno(alumnoId).then(setFilas).catch(() => setFilas([])); }, [alumnoId]);
-  if (!filas || !filas.length) return null;
+  useEffect(() => { (cargar ? cargar() : api.eventos.deAlumno(alumnoId)).then(setFilas).catch(() => setFilas([])); }, [alumnoId]);
+  if (!filas) return null;
+  if (!filas.length) return portal ? <div className="card"><p className="text-gray-500">Todavía no tienes boletos de eventos.</p></div> : null;
   async function enviar(b) {
     const c = window.prompt('¿A qué correo enviar este boleto?', b.correo || ''); if (!c) return;
     try { await api.eventos.enviarBoleto(b.id, c.trim()); setMsg('Boleto enviado a ' + c.trim()); } catch (e) { setMsg(e.message); }
   }
   return (
-    <div className="card">
-      <h3>Boletos de eventos</h3>
+    <div className={portal ? '' : 'card'}>
+      {!portal && <h3>Boletos de eventos</h3>}
+      {portal && <p className="text-sm text-gray-500 mb-3">Presenta el código QR en la entrada del evento (en tu teléfono o impreso). Cada boleto se usa una sola vez.</p>}
       <div className="grid sm:grid-cols-2 gap-3">
         {filas.map((b) => (
           <div key={b.id} className="border-2 border-dashed rounded-xl p-3 flex items-center gap-3">
@@ -33,7 +35,7 @@ export default function BoletosAlumno({ alumnoId }) {
               <p className="text-gray-500">{[b.fecha && fechaTxt(b.fecha), b.hora, b.lugar].filter(Boolean).join(' · ')}</p>
               <p className="mt-1"><span className={'badge ' + (ESTADO[b.estado] || ['', ''])[1]}>{(ESTADO[b.estado] || [b.estado])[0]}</span></p>
               {b.codigo && <p className="font-mono text-xs mt-1">{b.codigo}</p>}
-              {b.codigo && b.estado === 'pagado' && <button type="button" className="secondary mt-2" onClick={() => enviar(b)}>Enviar por correo</button>}
+              {!portal && b.codigo && b.estado === 'pagado' && <button type="button" className="secondary mt-2" onClick={() => enviar(b)}>Enviar por correo</button>}
             </div>
           </div>
         ))}

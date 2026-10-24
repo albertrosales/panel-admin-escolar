@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import BoletosAlumno from '../components/BoletosAlumno';
 import SacePanel from '../components/SacePanel';
 import { api, cerrarSesionPortal } from '../api';
 import { comprimirImagen } from '../imagen';
@@ -200,14 +201,15 @@ function VistaAlumno({ datos }) {
   const [tab, setTab] = useState('inicio');
   const [mat, setMat] = useState(null);
   const cargarMat = () => api.portal.matricula().then(setMat).catch(() => {});
-  useEffect(() => { cargarMat(); }, []);
+  const [tieneBoletos, setTieneBoletos] = useState(false);
+  useEffect(() => { cargarMat(); api.portal.boletos().then((r) => setTieneBoletos(r.length > 0)).catch(() => {}); }, []);
 
   const pendientes = datos.pagos.filter((x) => !x.pagado);
   const deuda = pendientes.reduce((t, x) => t + Number(x.monto || 0), 0);
   const vencidos = pendientes.filter((x) => new Date(x.fecha_vencimiento) < new Date()).length;
   const avisoMat = mat && mat.periodo && mat.periodo.abierta && (!mat.solicitud || mat.solicitud.estado === 'rechazada');
 
-  const tabs = [['inicio', 'Inicio'], ['notas', 'Calificaciones'], ['pagos', 'Pagos'], ['matricula', 'Matrícula'], ['info', 'Mi información']];
+  const tabs = [['inicio', 'Inicio'], ['notas', 'Calificaciones'], ['pagos', 'Pagos'], ['matricula', 'Matrícula'], ...(tieneBoletos ? [['boletos', 'Boletos']] : []), ['info', 'Mi información']];
 
   return (
     <div>
@@ -277,6 +279,8 @@ function VistaAlumno({ datos }) {
       )}
 
       {tab === 'matricula' && <MatriculaAlumno onCambio={cargarMat} />}
+
+      {tab === 'boletos' && <BoletosAlumno portal cargar={api.portal.boletos} />}
 
       {tab === 'info' && (
         <div className="card">
