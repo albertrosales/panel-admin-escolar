@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Cargando } from '../components/UI';
 import { api } from '../api';
 
 const ESTADO = { abierto: ['Abierto', 'badge-amarillo'], en_proceso: ['En proceso', 'badge-amarillo'], resuelto: ['Resuelto', 'badge-verde'], cerrado: ['Cerrado', ''] };
@@ -11,7 +12,7 @@ function Hilo({ id, esProveedor, onCambio }) {
   const [msg, setMsg] = useState('');
   const cargar = () => api.soporte.ver(id).then(setT).catch((e) => setMsg(e.message));
   useEffect(() => { cargar(); }, [id]);
-  if (!t) return <p className="text-sm text-gray-500">{msg || 'Cargando...'}</p>;
+  if (!t) return msg ? <p className="text-sm text-gray-500">{msg}</p> : <Cargando tarjetas={2} />;
   async function enviar(e) {
     e.preventDefault(); setMsg('');
     try { await api.soporte.responder(id, txt); setTxt(''); cargar(); onCambio(); } catch (err) { setMsg(err.message); }

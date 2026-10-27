@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Cargando, Barra } from '../components/UI';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip
@@ -36,7 +37,7 @@ export default function Dashboard() {
     });
   }, []);
 
-  if (cargando) return <p className="text-sm text-gray-500">Cargando resumen...</p>;
+  if (cargando) return <Cargando cifras={4} tarjetas={2} />;
 
   const a = resumen.alumnos;
   const p = resumen.profesores;
@@ -81,6 +82,13 @@ export default function Dashboard() {
           <div className="num text-amber-700">{a.en_plan_pago}</div>
           <div className="label">Con plan de pago</div>
         </div>
+      </div>
+
+      <div className="card">
+        <h3>Salud de los cobros</h3>
+        <Barra etiqueta="Alumnos al día" derecha={a.al_dia + ' de ' + a.activos} valor={a.al_dia} max={a.activos} color="verde" />
+        <Barra etiqueta="Con plan de pago" derecha={String(a.en_plan_pago)} valor={a.en_plan_pago} max={a.activos} color="ambar" />
+        <Barra etiqueta="Cobrado este mes frente a lo pendiente" derecha={'L. ' + resumen.ingresos_mes_actual.toFixed(2)} valor={resumen.ingresos_mes_actual} max={resumen.ingresos_mes_actual + resumen.total_pendiente_cobro} color="azul" />
       </div>
 
       <div className="card">

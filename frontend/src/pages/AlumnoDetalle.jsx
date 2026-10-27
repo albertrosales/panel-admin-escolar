@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Cargando, Esqueleto } from '../components/UI';
 import { useParams } from 'react-router-dom';
 import { api, resolverUrlArchivo } from '../api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList, CartesianGrid } from 'recharts';
@@ -136,7 +137,7 @@ export default function AlumnoDetalle() {
     }
   }
 
-  if (!alumno || !form) return <p>Cargando...</p>;
+  if (!alumno || !form) return <Cargando tarjetas={3} />;
 
   const idsYaMatriculado = (alumno.clases || []).map((c) => c.id);
   const gradosDisponibles = todosGrados.filter((g) => !idsYaMatriculado.includes(g.id));
@@ -294,7 +295,7 @@ export default function AlumnoDetalle() {
             <span className="text-sm text-gray-500">Asistencia: <b className="text-gray-700">{asis.porcentaje}%</b> ({asis.ausentes} ausencias)</span>
           )}
         </div>
-        {notas === null && <p className="text-sm text-gray-500">Cargando notas...</p>}
+        {notas === null && <Esqueleto h={60} />}
         {notas && notas.filter((n) => n.porcentaje != null).length === 0 && (
           <p className="text-sm text-gray-500">Sin notas disponibles todavía (se leen de Moodle).</p>
         )}

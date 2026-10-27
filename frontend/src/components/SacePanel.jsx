@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Cargando } from './UI';
 import { saceApi } from '../api';
 
 const ROM = ['I', 'II', 'III', 'IV'];
@@ -78,7 +79,7 @@ export default function SacePanel({ portal }) {
   const [msg, setMsg] = useState('');
   const cargar = () => A.clases().then(setClases).catch((e) => setMsg(e.message));
   useEffect(() => { cargar(); }, []);
-  if (!clases) return <p className="text-sm text-gray-500">{msg || 'Cargando...'}</p>;
+  if (!clases) return msg ? <p className="text-sm text-gray-500">{msg}</p> : <Cargando tarjetas={1} />;
   return (
     <div>
       {clases.length === 0 && <div className="card"><p className="text-sm text-gray-500">Aún no hay clases creadas.</p></div>}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Cargando } from '../components/UI';
 import { api } from '../api';
 
 const ESTADO_CLS = { enviado: 'badge-verde', entregado: 'badge-verde', pendiente: 'badge-amarillo', enviando: 'badge-amarillo', fallido: 'badge-rojo' };
@@ -280,7 +281,7 @@ export default function Notificaciones() {
   const [info, setInfo] = useState(null);
   const recargar = () => Promise.all([api.correos.plantillas().then(setPlantillas), api.correos.estado().then(setInfo)]);
   useEffect(() => { recargar(); }, []);
-  if (!info) return <p>Cargando...</p>;
+  if (!info) return <Cargando tarjetas={2} />;
   return (
     <div>
       <h2>Notificaciones por correo</h2>

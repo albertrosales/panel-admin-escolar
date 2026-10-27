@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Barra } from '../components/UI';
 import QRCode from 'qrcode';
 import { api, obtenerUsuario } from '../api';
 import EscanerQR from '../components/EscanerQR';
@@ -192,6 +193,8 @@ function Detalle({ evento, puedeCobrar, recargar, volver, colegio }) {
           <div><p className="text-2xl font-semibold">{evento.pendientes}</p><p className="text-xs text-gray-500">Sin pagar</p></div>
           <div><p className="text-2xl font-semibold text-green-700">{L(evento.recaudado)}</p><p className="text-xs text-gray-500">Recaudado</p></div>
         </div>
+        {evento.capacidad > 0 && <Barra etiqueta="Capacidad ocupada" derecha={evento.vendidos + ' de ' + evento.capacidad} valor={evento.vendidos} max={evento.capacidad} color={evento.vendidos >= evento.capacidad ? 'rojo' : 'azul'} />}
+        {evento.vendidos > 0 && <Barra etiqueta="Asistencia en la entrada" derecha={evento.ingresaron + ' de ' + evento.vendidos} valor={evento.ingresaron} max={evento.vendidos} color="verde" />}
       </div>
       <div className="flex gap-2 mb-3">{T.map(([k, n]) => <button key={k} className={tab === k ? '' : 'secondary'} onClick={() => setTab(k)}>{n}</button>)}</div>
       {tab === 'escanear' && <Escaner evento={evento} recargar={recargar} />}
@@ -227,6 +230,8 @@ export default function Eventos({ ctx }) {
             <div className="flex justify-between gap-2"><h3 className="!mb-0">{e.nombre}</h3>{!e.activo && <span className="badge">Cerrado</span>}</div>
             <p className="text-sm text-gray-500">{[e.fecha && fechaTxt(e.fecha), e.hora, e.lugar].filter(Boolean).join(' · ') || 'Sin fecha'}</p>
             <p className="text-sm mt-1">Boleto {L(e.precio)} · {e.vendidos}{e.capacidad ? '/' + e.capacidad : ''} vendidos · {e.ingresaron} ingresaron · <strong>{L(e.recaudado)}</strong></p>
+            {e.capacidad > 0 && <Barra etiqueta="Boletos vendidos" derecha={e.vendidos + ' de ' + e.capacidad} valor={e.vendidos} max={e.capacidad} color={e.vendidos >= e.capacidad ? 'rojo' : e.vendidos / e.capacidad > 0.8 ? 'ambar' : 'azul'} />}
+            {e.vendidos > 0 && <Barra etiqueta="Ya ingresaron" derecha={e.ingresaron + ' de ' + e.vendidos} valor={e.ingresaron} max={e.vendidos} color="verde" />}
             <div className="flex gap-2 mt-3">
               <button onClick={() => setSel(e)}>Abrir</button>
               {puedeCobrar && <button className="secondary" onClick={() => setForm(e)}>Editar</button>}

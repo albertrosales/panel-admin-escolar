@@ -1035,3 +1035,59 @@
   .barra-movil { display: flex; position: sticky; top: 0; z-index: 30; align-items: center; gap: .6rem; padding: .6rem 4.2rem .6rem .75rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
   .barra-movil button { padding: .45rem .6rem; }
 }
+
+
+/* ---------- Animaciones, avisos, barras y tarjetas ---------- */
+@keyframes subir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes giro { to { transform: rotate(360deg); } }
+@keyframes brillo { 100% { transform: translateX(100%); } }
+@keyframes correr { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+@keyframes entra { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+
+/* Tarjetas: entrada suave, elevación al pasar el mouse y acento de color en las cifras */
+.content > div > .card, .content .stats-row > .card, .content > .card { animation: subir .35s ease both; transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease; }
+.content .stats-row > .card:nth-child(2) { animation-delay: .05s; }
+.content .stats-row > .card:nth-child(3) { animation-delay: .1s; }
+.content .stats-row > .card:nth-child(4) { animation-delay: .15s; }
+.card:hover { box-shadow: 0 6px 18px rgba(15, 23, 42, .08); border-color: #d4d4d8; }
+.stat-box { position: relative; overflow: hidden; }
+.stat-box::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--acento, #2455e6); opacity: .85; }
+.stat-box:hover { transform: translateY(-2px); }
+.stat-box .num { font-variant-numeric: tabular-nums; }
+
+/* Barra de carga superior */
+.barra-carga { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 100; overflow: hidden; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.barra-carga.activa { opacity: 1; }
+.barra-carga span { display: block; height: 100%; width: 30%; background: var(--acento, #2455e6); border-radius: 0 3px 3px 0; animation: correr 1.1s ease-in-out infinite; }
+
+/* Spinner dentro de los botones mientras esperan respuesta */
+button[data-cargando] { pointer-events: none; opacity: .85; }
+button[data-cargando]::after { content: ''; display: inline-block; width: .85em; height: .85em; margin-left: .5rem; vertical-align: -.1em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: giro .6s linear infinite; }
+
+/* Avisos (toasts) */
+.avisos { position: fixed; right: 16px; bottom: 16px; z-index: 110; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
+.aviso { display: flex; align-items: center; gap: 10px; background: #111827; color: #fff; padding: 11px 12px 11px 14px; border-radius: 12px; font-size: 14px; box-shadow: 0 10px 28px rgba(0, 0, 0, .22); animation: entra .25s ease both; }
+.aviso svg { flex: none; color: #4ade80; }
+.aviso-error svg { color: #fbbf24; }
+.aviso span { flex: 1; }
+.aviso button { background: transparent !important; color: #9ca3af; padding: 4px; min-height: 0; border-radius: 6px; }
+.aviso button:hover { color: #fff; }
+@media (max-width: 767px) { .avisos { left: 16px; right: 16px; bottom: 72px; max-width: none; } }
+
+/* Esqueletos de carga */
+.esqueleto { position: relative; overflow: hidden; background: #ececef; border-radius: 8px; }
+.esqueleto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .7), transparent); transform: translateX(-100%); animation: brillo 1.3s infinite; }
+
+/* Barras de progreso */
+.barra-wrap { margin: 6px 0; }
+.barra-txt { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+.barra { height: 8px; background: #eceff3; border-radius: 999px; overflow: hidden; }
+.barra-fill { height: 100%; border-radius: 999px; transition: width .8s cubic-bezier(.2, .8, .2, 1); }
+.barra-azul { background: var(--acento, #2455e6); }
+.barra-verde { background: linear-gradient(90deg, #16a34a, #4ade80); }
+.barra-ambar { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.barra-rojo { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

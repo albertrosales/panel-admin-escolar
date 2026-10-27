@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Esqueleto } from './UI';
 import { ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { api } from '../api';
 
@@ -113,7 +114,7 @@ export default function Calendario({ onClose }) {
             </form>
           )}
 
-          {!det && <p className="text-gray-400">Cargando...</p>}
+          {!det && <Esqueleto h={80} />}
           {det && (
             <ul className="flex flex-col gap-1.5">
               {sd === diaPago && sm - 1 === m && sy === y && <li className="text-emerald-700">💰 Día de pago mensual</li>}

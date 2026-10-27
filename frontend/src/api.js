@@ -1,3 +1,4 @@
+import { inicioPeticion, finPeticion, aviso } from './ui';
 const BASE = import.meta.env.VITE_API_URL || '/api';
 // Dirección pública del logo de un colegio (el API puede estar en otro dominio que el sitio)
 export const urlLogo = (id, v) => BASE + '/marca/' + id + '/logo' + (v ? '?v=' + v : '');
@@ -53,7 +54,25 @@ export function haySesionPortal() {
   return !!localStorage.getItem('portal_token');
 }
 
+const SIN_AVISO = ['/escanear', '/login', '/auth', '/vista', '/previsualizar', '/analizar', '/leer', '/codigo', '/evaluar'];
+/** fetch con barra de carga, aviso de guardado en cambios y aviso si no hay conexión */
+async function conAvisos(path, options, fn) {
+  const metodo = String((options && options.method) || 'GET').toUpperCase();
+  inicioPeticion();
+  try {
+    const r = await fn();
+    if (metodo !== 'GET' && !SIN_AVISO.some((x) => path.includes(x))) aviso(metodo === 'DELETE' ? 'Eliminado' : 'Guardado correctamente');
+    return r;
+  } catch (e) {
+    if (e instanceof TypeError) aviso('Sin conexión con el servidor. Revisa tu internet.', 'error');
+    throw e;
+  } finally { finPeticion(); }
+}
+
 async function request(path, options) {
+  return conAvisos(path, options, () => requestBase(path, options));
+}
+async function requestBase(path, options) {
   options = options || {};
   const token = getToken();
   const headers = { 'Content-Type': 'application/json' };
@@ -71,6 +90,9 @@ async function request(path, options) {
 }
 
 async function requestPortal(path, options) {
+  return conAvisos(path, options, () => requestPortalBase(path, options));
+}
+async function requestPortalBase(path, options) {
   options = options || {};
   const token = localStorage.getItem('portal_token');
   const headers = { 'Content-Type': 'application/json' };

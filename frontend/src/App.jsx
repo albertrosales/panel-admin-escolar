@@ -28,6 +28,7 @@ import Finanzas from './pages/Finanzas';
 import Eventos from './pages/Eventos';
 import Proveedor from './pages/Proveedor';
 import Calendario from './components/Calendario';
+import { CapaUI } from './components/UI';
 
 function RutaProtegida({ children }) {
   if (!haySesion()) return <Navigate to="/login" replace />;
@@ -105,7 +106,7 @@ function Panel() {
 
   return (
     <div className="layout">
-      {color && <style>{`button:not(.secondary){background:${color}} button:not(.secondary):hover{filter:brightness(.9)} .sidebar a.active{color:${color};background:${color}1a}`}</style>}
+      {color && <style>{`button:not(.secondary){background:${color}} button:not(.secondary):hover{filter:brightness(.9)} button[data-cargando]{background:${color}} .sidebar a.active{color:${color};background:${color}1a} :root{--acento:${color}}`}</style>}
       <div className="barra-movil">
         <button type="button" className="secondary" aria-label="Abrir menú" onClick={() => setMenu(true)}><Menu size={20} /></button>
         {logoSrc && <img src={logoSrc} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/logo-ulua-media.png'; }} alt="" className="h-8 w-auto max-w-[48px] object-contain" />}
@@ -187,6 +188,7 @@ function Panel() {
 export default function App() {
   return (
     <BrowserRouter>
+      <CapaUI />
       <Routes>
         <Route path="/inicio" element={<Inicio />} />
         <Route path="/privacidad" element={<Privacidad />} />
