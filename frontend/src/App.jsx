@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText, Wallet, Ticket, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, UserPlus, BookOpen, Settings, LogOut, CalendarDays, ClipboardCheck, Receipt, Landmark, Mail, FileCheck, FileSpreadsheet, Building2, LifeBuoy, ScrollText, Wallet, Ticket, Menu, HandCoins, FileText } from 'lucide-react';
 import { api, urlLogo, haySesion, haySesionPortal, cerrarSesion, obtenerUsuario, guardarSesion } from './api';
 import Login from './pages/Login';
 import { Inicio, Privacidad, Terminos } from './pages/Publico';
@@ -26,6 +26,9 @@ import Soporte from './pages/Soporte';
 import Auditoria from './pages/Auditoria';
 import Finanzas from './pages/Finanzas';
 import Eventos from './pages/Eventos';
+import Cobros from './pages/Cobros';
+import Recibos from './pages/Recibos';
+import BuscadorGlobal from './components/BuscadorGlobal';
 import Proveedor from './pages/Proveedor';
 import Calendario from './components/Calendario';
 import { CapaUI } from './components/UI';
@@ -46,6 +49,8 @@ const NAV = [
   { to: '/profesores', label: 'Profesores', icon: GraduationCap },
   { to: '/grados', label: 'Clases', icon: BookOpen },
   { to: '/comprobantes', label: 'Comprobantes', icon: Receipt, modulo: 'comprobantes' },
+  { to: '/cobros', label: 'Cobros pendientes', icon: HandCoins, roles: ['admin', 'director', 'superadmin', 'secretaria'] },
+  { to: '/recibos', label: 'Recibos', icon: FileText, roles: ['admin', 'director', 'superadmin', 'secretaria'] },
   { to: '/finanzas', label: 'Finanzas', icon: Wallet, roles: ['admin', 'director', 'superadmin'] },
   { to: '/eventos', label: 'Eventos y boletos', icon: Ticket, roles: ['admin', 'director', 'superadmin', 'secretaria'] },
   { to: '/conciliacion', label: 'Estado de cuenta', icon: Landmark, modulo: 'conciliacion' },
@@ -133,6 +138,7 @@ function Panel() {
         </div>
       </aside>
       <main className="content">
+        {!suspendida && <BuscadorGlobal />}
         {errorCtx && <p className="text-sm text-red-600 mb-3">{errorCtx}</p>}
         {ctx && <Aviso ctx={ctx} />}
         {suspendida ? (
@@ -157,6 +163,8 @@ function Panel() {
             <Route path="/matricula" element={<Matricula />} />
             <Route path="/notificaciones" element={<Notificaciones />} />
             <Route path="/asistencia" element={<Asistencia />} />
+            <Route path="/cobros" element={<Cobros />} />
+            <Route path="/recibos" element={<Recibos />} />
             <Route path="/finanzas" element={<Finanzas />} />
             <Route path="/gastos" element={<Navigate to="/finanzas" replace />} />
             <Route path="/eventos" element={<Eventos ctx={ctx} />} />

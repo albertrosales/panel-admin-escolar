@@ -97,6 +97,21 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Datos para el pago guiado: cuánto debe y a dónde pagar
+router.get('/pago-info', requirePortal, async (req, res) => {
+  try {
+    if (req.portal.tipo !== 'alumno') return res.json(null);
+    const { rows: [c] } = await pool.query('SELECT nombre, cuentas_destino FROM colegios WHERE id = $1', [req.portal.colegio_id]);
+    const { rows: [a] } = await pool.query('SELECT codigo FROM alumnos WHERE id = $1', [req.portal.id]);
+    const { rows: pendientes } = await pool.query(
+      `SELECT p.id, p.periodo, p.monto::float AS monto, COALESCE(p.recargo,0)::float AS recargo, p.fecha_vencimiento,
+              EXISTS (SELECT 1 FROM comprobantes k WHERE k.pago_id = p.id AND k.estado IN ('por_verificar','requiere_alumno')) AS en_validacion
+       FROM pagos p WHERE p.alumno_id = $1 AND NOT p.pagado ORDER BY p.fecha_vencimiento`, [req.portal.id]);
+    const cuentas = String((c && c.cuentas_destino) || '').split(/\n+/).map((x) => x.trim()).filter(Boolean);
+    res.json({ colegio: c && c.nombre, codigo: a && a.codigo, cuentas, pendientes });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Boletos de eventos del alumno autenticado (el QR solo se entrega cuando ya está pagado)
 router.get('/boletos', requirePortal, async (req, res) => {
   try {

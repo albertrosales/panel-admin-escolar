@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Cargando, Esqueleto } from '../components/UI';
 import { useParams } from 'react-router-dom';
-import { api, resolverUrlArchivo } from '../api';
+import { api, resolverUrlArchivo, abrirRecibosPDF } from '../api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList, CartesianGrid } from 'recharts';
 import EstadoBadge from '../components/EstadoBadge';
 import SelectorClases from '../components/SelectorClases';
@@ -340,7 +340,7 @@ export default function AlumnoDetalle() {
                 <td>{Number(p.recargo) > 0 && !p.pagado ? 'L. ' + p.recargo : '—'}</td>
                 <td>{new Date(p.fecha_vencimiento).toLocaleDateString('es-HN')}</td>
                 <td>{p.pagado ? 'Pagado' : p.en_validacion ? <span className="badge badge-amarillo">Pendiente de validación</span> : 'Pendiente'}</td>
-                <td>{!p.pagado && <button onClick={() => marcarPagado(p.id)}>Marcar pagado</button>}</td>
+                <td className="whitespace-nowrap">{!p.pagado && <button onClick={() => marcarPagado(p.id)}>Marcar pagado</button>}{p.pagado && <button className="secondary" onClick={() => abrirRecibosPDF([p.id]).catch((e) => setMensaje(e.message))}>Recibo</button>}</td>
               </tr>
             ))}
           </tbody>

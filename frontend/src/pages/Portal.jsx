@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import BoletosAlumno from '../components/BoletosAlumno';
 import SacePanel from '../components/SacePanel';
 import { api, cerrarSesionPortal } from '../api';
+import { Barra } from '../components/UI';
+import { Check, Copy, CheckCircle2 } from 'lucide-react';
 import { comprimirImagen } from '../imagen';
 import EstadoBadge from '../components/EstadoBadge';
 
@@ -56,7 +58,108 @@ export default function Portal() {
 
 const ESTADOS_COMP = { requiere_alumno: 'Pendiente de validación', por_verificar: 'Pendiente de validación', confirmado: 'Confirmado', rechazado: 'Rechazado' };
 
-function SubirComprobante() {
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const mesTxt = (p) => { const m = /^(\d{4})-(\d{2})/.exec(p || ''); return m ? MESES[+m[2] - 1] + ' ' + m[1] : p; };
+const Lps = (n) => 'L. ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Pago guiado paso a paso: elegir qué pagar → cómo pagar → subir comprobante → listo */
+function PagoGuiado({ onCambio }) {
+  const [info, setInfo] = useState(null);
+  const [paso, setPaso] = useState(1);
+  const [sel, setSel] = useState(new Set());
+  const [copiado, setCopiado] = useState('');
+  const cargar = () => api.portal.pagoInfo().then((r) => {
+    setInfo(r || { pendientes: [], cuentas: [] });
+    const libres = ((r && r.pendientes) || []).filter((p) => !p.en_validacion);
+    setSel(new Set(libres.length ? [libres[0].id] : []));
+  }).catch(() => setInfo({ pendientes: [], cuentas: [] }));
+  useEffect(() => { cargar(); }, []);
+  if (!info) return <div className="card"><div className="esqueleto" style={{ height: 90 }} /></div>;
+
+  const libres = info.pendientes.filter((p) => !p.en_validacion);
+  const elegidos = libres.filter((p) => sel.has(p.id));
+  const total = elegidos.reduce((t, p) => t + p.monto + p.recargo, 0);
+  const alternar = (id) => { const n = new Set(sel); n.has(id) ? n.delete(id) : n.add(id); setSel(n); };
+  const copiar = (t) => { try { navigator.clipboard.writeText(t); setCopiado(t); setTimeout(() => setCopiado(''), 1500); } catch (e) { /* sin portapapeles */ } };
+  const pasos = ['Elige', 'Paga', 'Comprobante', 'Listo'];
+
+  return (
+    <div>
+      <div className="card">
+        <h3>Pagar mensualidad</h3>
+        <div className="pasos" aria-label={'Paso ' + paso + ' de 4'}>
+          {pasos.map((n, i) => (
+            <span key={n} style={{ display: 'contents' }}>
+              {i > 0 && <span className={'paso-linea' + (paso > i ? ' hecho' : '')} />}
+              <span className={'paso' + (paso === i + 1 ? ' activo' : paso > i + 1 ? ' hecho' : '')}><i>{paso > i + 1 ? <Check size={14} /> : i + 1}</i><span>{n}</span></span>
+            </span>
+          ))}
+        </div>
+
+        {paso === 1 && (
+          <div>
+            {info.pendientes.length === 0 ? (
+              <p className="text-sm text-green-700 flex items-center gap-2"><CheckCircle2 size={16} /> No tienes pagos pendientes. ¡Gracias!</p>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-3">Marca lo que vas a pagar ahora.</p>
+                {info.pendientes.map((p) => (
+                  <label key={p.id} className={'opcion-pago !flex-row' + (sel.has(p.id) ? ' on' : '') + (p.en_validacion ? ' off' : '')}>
+                    <input type="checkbox" className="w-auto" disabled={p.en_validacion} checked={sel.has(p.id)} onChange={() => alternar(p.id)} />
+                    <span className="flex-1 text-gray-900 text-sm"><b className="capitalize">{mesTxt(p.periodo)}</b><br /><span className="text-xs text-gray-500">Vence {fecha(p.fecha_vencimiento)}{p.recargo > 0 ? ' · incluye recargo ' + Lps(p.recargo) : ''}</span></span>
+                    {p.en_validacion ? <span className="badge badge-amarillo">En revisión</span> : <b className="text-gray-900">{Lps(p.monto + p.recargo)}</b>}
+                  </label>
+                ))}
+                <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
+                  <p className="text-sm">Total a pagar: <b className="text-lg">{Lps(total)}</b></p>
+                  <button disabled={!elegidos.length} onClick={() => setPaso(2)}>Continuar</button>
+                </div>
+              </>
+            )}
+            <p className="text-xs text-gray-500 mt-4">¿Vas a pagar por otro alumno? <button type="button" className="secondary !py-1 !px-2 !text-xs" onClick={() => setPaso(3)}>Ir directo a subir el comprobante</button></p>
+          </div>
+        )}
+
+        {paso === 2 && (
+          <div>
+            <p className="text-sm mb-3">Haz una transferencia o depósito por <b className="text-lg">{Lps(total)}</b> a:</p>
+            {info.cuentas.length ? info.cuentas.map((c) => (
+              <div key={c} className="cuenta-pago"><span>{c}</span>
+                <button type="button" className="secondary !py-1 !px-2 !text-xs inline-flex items-center gap-1" onClick={() => copiar(c)}>{copiado === c ? <><Check size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}</button>
+              </div>
+            )) : <p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-3 mb-2">El colegio aún no publicó sus cuentas. Pregunta en administración a dónde pagar y luego sube tu comprobante.</p>}
+            {info.codigo && <p className="text-xs text-gray-500 mt-2">Si el banco te deja escribir un detalle, pon tu código de alumno: <b>{info.codigo}</b>.</p>}
+            <div className="flex gap-2 mt-4"><button className="secondary" onClick={() => setPaso(1)}>Atrás</button><button onClick={() => setPaso(3)}>Ya pagué, subir comprobante</button></div>
+          </div>
+        )}
+
+        {paso === 3 && (
+          <div>
+            <p className="text-sm text-gray-500 mb-3">Sube la captura o foto de tu comprobante. El sistema lo lee solo.</p>
+            <button className="secondary mb-3" onClick={() => setPaso(2)}>← Atrás</button>
+          </div>
+        )}
+
+        {paso === 4 && (
+          <div className="text-center py-2">
+            <CheckCircle2 size={44} className="mx-auto text-green-600 mb-2" />
+            <p className="text-lg font-semibold">¡Comprobante enviado!</p>
+            <p className="text-sm text-gray-500 mb-4">El colegio lo revisará y te avisará por correo. Cuando se confirme recibirás tu recibo de pago.</p>
+            <div className="text-left max-w-sm mx-auto">
+              <Barra etiqueta="Enviado" derecha="✓" valor={1} max={1} color="verde" />
+              <Barra etiqueta="En revisión por el colegio" derecha="en proceso" valor={1} max={2} color="ambar" />
+              <Barra etiqueta="Pago confirmado y recibo" derecha="pendiente" valor={0} max={1} color="azul" />
+            </div>
+            <button className="mt-4" onClick={() => { setPaso(1); cargar(); onCambio && onCambio(); }}>Listo</button>
+          </div>
+        )}
+      </div>
+      {paso === 3 && <SubirComprobante onEnviado={() => setPaso(4)} />}
+    </div>
+  );
+}
+
+function SubirComprobante({ onEnviado }) {
   const [lista, setLista] = useState([]);
   const [msg, setMsg] = useState('');
   const [subiendo, setSubiendo] = useState(false);
@@ -85,6 +188,7 @@ function SubirComprobante() {
       setMsg('Comprobante enviado. Está pendiente de validación; el colegio lo confirmará.');
       setCodigo(''); setConf(null);
       cargar();
+      if (onEnviado) onEnviado();
     } catch (err) { setMsg('Error: ' + err.message); }
     setSubiendo(false); input.value = '';
   }
@@ -256,7 +360,7 @@ function VistaAlumno({ datos }) {
 
       {tab === 'pagos' && (
         <div>
-          <SubirComprobante />
+          <PagoGuiado />
           <div className="card">
             <h3>Historial de pagos</h3>
             {datos.pagos.length === 0 ? (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Cargando, Barra } from '../components/UI';
+import Alertas from '../components/Alertas';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip
@@ -45,6 +46,8 @@ export default function Dashboard() {
   return (
     <div>
       <h2>Resumen general</h2>
+
+      <Alertas />
 
       <div className="stats-row">
         <div className="card stat-box">

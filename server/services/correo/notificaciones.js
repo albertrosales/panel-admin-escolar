@@ -235,12 +235,22 @@ async function procesarPendientes() {
       const { rows } = await pool.query(
         `UPDATE notificaciones_correo SET estado='enviando' WHERE id IN (
            SELECT id FROM notificaciones_correo WHERE estado='pendiente' AND intentos < 3 ORDER BY id LIMIT 20 FOR UPDATE SKIP LOCKED)
-         RETURNING id, colegio_id, destinatario, asunto, cuerpo_texto, cuerpo_html`);
+         RETURNING id, colegio_id, destinatario, asunto, cuerpo_texto, cuerpo_html, plantilla_clave, referencia`);
       if (!rows.length) break;
       for (const n of rows) {
         try {
           const { rows: [c] } = await pool.query('SELECT nombre FROM colegios WHERE id = $1', [n.colegio_id]);
-          await enviar({ colegioId: n.colegio_id, nombreRemitente: c && c.nombre, to: n.destinatario, asunto: n.asunto, html: n.cuerpo_html, texto: n.cuerpo_texto });
+          // El aviso de pago confirmado lleva el recibo en PDF adjunto
+          let adjuntos;
+          const mp = n.plantilla_clave === 'pago_confirmado' && /^pago:(\d+)$/.exec(n.referencia || '');
+          if (mp) {
+            try {
+              const rec = require('../recibo');
+              const datos = await rec.datosRecibos(n.colegio_id, [Number(mp[1])]);
+              if (datos.length) adjuntos = [{ nombre: `recibo-${datos[0].numero}.pdf`, tipo: 'application/pdf', buffer: await rec.pdfRecibos(datos, { soloUno: true }) }];
+            } catch (e) { console.error('recibo adjunto:', e.message); }
+          }
+          await enviar({ colegioId: n.colegio_id, nombreRemitente: c && c.nombre, to: n.destinatario, asunto: n.asunto, html: n.cuerpo_html, texto: n.cuerpo_texto, adjuntos });
           await pool.query(`UPDATE notificaciones_correo SET estado='enviado', enviado_en=NOW(), error=NULL WHERE id=$1`, [n.id]);
         } catch (e) {
           await pool.query(`UPDATE notificaciones_correo SET intentos = intentos + 1, error = $2, estado = CASE WHEN intentos + 1 >= 3 THEN 'fallido' ELSE 'pendiente' END WHERE id = $1`, [n.id, String(e.message).slice(0, 300)]);

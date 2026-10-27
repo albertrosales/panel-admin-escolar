@@ -167,6 +167,7 @@ export const api = {
       requestPortal('/portal/login', { method: 'POST', body: JSON.stringify({ username, password, colegio_id }) }),
     me: () => requestPortal('/portal/me'),
     boletos: () => requestPortal('/portal/boletos'),
+    pagoInfo: () => requestPortal('/portal/pago-info'),
     subirComprobante: (imagen, codigo) => requestPortal('/portal-comprobantes', { method: 'POST', body: JSON.stringify({ imagen, codigo }) }),
     verificarCodigo: (codigo) => requestPortal('/portal-comprobantes/codigo/' + encodeURIComponent(codigo)),
     misComprobantes: () => requestPortal('/portal-comprobantes'),
@@ -212,6 +213,16 @@ export const api = {
     enviarBoleto: (bid, correo) => request('/eventos/boletos/' + bid + '/enviar', { method: 'POST', body: JSON.stringify({ correo }) }),
     anular: (bid) => request('/eventos/boletos/' + bid + '/anular', { method: 'POST' }),
     escanear: (codigo, evento_id) => request('/eventos/escanear', { method: 'POST', body: JSON.stringify({ codigo, evento_id }) })
+  },
+  buscar: (q) => request('/buscar?q=' + encodeURIComponent(q)),
+  alertas: () => request('/alertas'),
+  cobros: {
+    pendientes: () => request('/cobros/pendientes'),
+    recordar: (alumno_ids, plantilla) => request('/cobros/recordar', { method: 'POST', body: JSON.stringify({ alumno_ids, plantilla }) })
+  },
+  recibos: {
+    listar: (q) => request('/recibos?' + new URLSearchParams(q || {})),
+    enviar: (ids, correo) => request('/recibos/enviar', { method: 'POST', body: JSON.stringify({ ids, correo }) })
   },
   correoEnvio: {
     estado: () => request('/correo-oauth/estado'),
@@ -344,3 +355,13 @@ export const api = {
     generarCobrosMensuales: () => request('/admin/generar-cobros-mensuales', { method: 'POST' })
   }
 };
+
+// Abre el PDF de recibos (2 por hoja carta) listo para imprimir
+export async function abrirRecibosPDF(ids) {
+  const res = await fetch(BASE + '/recibos/pdf?ids=' + ids.join(','), { headers: { Authorization: 'Bearer ' + getToken() } });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'No se pudo generar el recibo');
+  const url = URL.createObjectURL(await res.blob());
+  const w = window.open(url, '_blank');
+  if (!w) { const a = document.createElement('a'); a.href = url; a.download = 'recibos.pdf'; a.click(); }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
