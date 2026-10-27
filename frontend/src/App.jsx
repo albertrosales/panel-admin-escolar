@@ -132,11 +132,14 @@ function Panel() {
         </nav>
         <div className="mt-auto pt-6">
           {usuario && <p className="text-xs text-gray-500 px-3 mb-2">{usuario.nombre}</p>}
-          <button className="secondary w-full flex items-center justify-center gap-2" onClick={salir}>
+          <button className="secondary w-full flex items-center justify-center gap-2 md:hidden" onClick={salir}>
             <LogOut size={15} /> Cerrar sesión
           </button>
         </div>
       </aside>
+      <button type="button" className="secondary btn-salir hidden md:flex" onClick={salir} title="Cerrar sesión">
+        <LogOut size={16} /> Cerrar sesión
+      </button>
       <main className="content">
         {!suspendida && <BuscadorGlobal />}
         {errorCtx && <p className="text-sm text-red-600 mb-3">{errorCtx}</p>}

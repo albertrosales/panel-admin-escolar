@@ -1128,3 +1128,9 @@ button[data-cargando]::after { content: ''; display: inline-block; width: .85em;
 .opcion-pago.on { border-color: var(--acento, #2455e6); background: #f5f8ff; }
 .opcion-pago.off { opacity: .55; cursor: default; }
 .cuenta-pago { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f7f7f8; border-radius: 12px; padding: 10px 14px; margin-bottom: 8px; font-size: 14px; word-break: break-word; }
+
+/* Cerrar sesión: esquina inferior derecha */
+.btn-salir { position: fixed; right: 20px; bottom: 20px; z-index: 40; align-items: center; gap: 8px; background: #fff !important; box-shadow: 0 4px 14px rgba(15, 23, 42, .12); border-radius: 999px; padding: .55rem 1rem; }
+.btn-salir:hover { background: #fef2f2 !important; color: #b91c1c; border-color: #fecaca; }
+/* En escritorio los avisos suben al centro para no chocar con el botón */
+@media (min-width: 768px) { .avisos { right: auto; left: 50%; transform: translateX(-50%); top: 16px; bottom: auto; } }
