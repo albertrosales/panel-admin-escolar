@@ -10,11 +10,19 @@ const useUI = () => useSyncExternalStore(suscribir, snap);
 export function CapaUI() {
   const { pendientes, avisos } = useUI();
   const [barra, setBarra] = useState(false);
+  const [lento, setLento] = useState(false);
 
   // La barra solo aparece si la petición tarda más de 150 ms (evita parpadeos)
   useEffect(() => {
     if (!pendientes) { const t = setTimeout(() => setBarra(false), 250); return () => clearTimeout(t); }
     const t = setTimeout(() => setBarra(true), 150);
+    return () => clearTimeout(t);
+  }, [pendientes]);
+
+  // Si el servidor tarda más de 4 s (estaba dormido), se avisa para que nadie piense que se trabó
+  useEffect(() => {
+    if (!pendientes) { setLento(false); return; }
+    const t = setTimeout(() => setLento(true), 4000);
     return () => clearTimeout(t);
   }, [pendientes]);
 
@@ -35,6 +43,7 @@ export function CapaUI() {
   return (
     <>
       <div className={'barra-carga' + (barra ? ' activa' : '')} aria-hidden="true"><span /></div>
+      {lento && <div className="aviso-lento" role="status">El servidor estaba descansando y está despertando. Puede tardar hasta un minuto; no cierres la página.</div>}
       <div className="avisos" role="status" aria-live="polite">
         {avisos.map((a) => (
           <div key={a.id} className={'aviso aviso-' + a.tipo}>

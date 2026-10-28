@@ -365,3 +365,8 @@ export async function abrirRecibosPDF(ids) {
   if (!w) { const a = document.createElement('a'); a.href = url; a.download = 'recibos.pdf'; a.click(); }
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
+
+// Despierta el servidor apenas se abre el sitio (en el plan gratuito de Render se duerme tras 15 min sin uso)
+export function despertarServidor() {
+  try { fetch(ORIGIN + '/health', { cache: 'no-store' }).catch(() => {}); } catch (e) { /* sin red */ }
+}
